@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>PGJ Multiplayer Demo</title>
+    <style>
+      :root { color-scheme: dark; }
+      body { margin: 0; font-family: ui-sans-serif, system-ui, Segoe UI, Arial; background:#0b1020; color:#e6e8ff; }
+      header { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.08); display:flex; gap:12px; align-items:center; }
+      input, button { background:#121a33; color:#e6e8ff; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 10px 12px; }
+      button { cursor: pointer; }
+      button:hover { border-color: rgba(255,255,255,0.25); }
+      main { display: grid; grid-template-columns: 320px 1fr; gap: 12px; padding: 12px; }
+      .panel { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px; }
+      #canvas { width: 100%; height: auto; background: #060a14; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); }
+      .row { display:flex; gap: 8px; align-items:center; margin-bottom: 8px; }
+      .hint { opacity: 0.75; font-size: 12px; line-height: 1.4; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; opacity: 0.9; }
+      ul { margin: 8px 0 0; padding-left: 18px; }
+      li { margin: 4px 0; }
+      .badge { display:inline-block; padding:2px 8px; border-radius: 999px; border:1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.06); }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong>PGJ Multiplayer Demo</strong>
+      <span class="badge" id="status">disconnected</span>
+      <span class="mono" id="socketId"></span>
+    </header>
+
+    <main>
+      <section class="panel">
+        <div class="row">
+          <input id="name" placeholder="Name" value="Player" />
+          <input id="room" placeholder="Room" value="lobby" />
+        </div>
+        <div class="row">
+          <button id="join">Join room</button>
+          <button id="leave">Disconnect</button>
+        </div>
+        <div class="hint">Move with <span class="badge">W</span><span class="badge">A</span><span class="badge">S</span><span class="badge">D</span> or arrow keys. This demo sends input to the server; the server is authoritative and broadcasts state at 20Hz.</div>
+
+        <h3>Players</h3>
+        <ul id="players"></ul>
+
+        <h3>Room state</h3>
+        <div class="mono" id="roomState">(none)</div>
+      </section>
+
+      <section>
+        <canvas id="canvas" width="800" height="450"></canvas>
+      </section>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="/client.js"></script>
+  </body>
+</html>
