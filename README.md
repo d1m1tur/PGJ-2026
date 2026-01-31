@@ -1,4 +1,4 @@
-# PGJ Multiplayer Server (Node + Socket.IO)
+# PGJ Multiplayer Server (Node + WebSocket)
 
 Minimal multiplayer web game server for prototyping: a server-authoritative tick updates player positions and broadcasts room state.
 

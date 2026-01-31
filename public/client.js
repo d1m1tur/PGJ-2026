@@ -13,40 +13,91 @@ const ctx = canvas.getContext('2d');
 let socket = null;
 let currentState = null;
 let localPlayerId = null;
+const pendingRequests = new Map();
+
+function getSocketUrl() {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${protocol}//${window.location.host}`;
+}
 
 function setStatus(text) {
   statusEl.textContent = text;
 }
 
 function ensureSocket() {
-  if (socket && socket.connected) return socket;
+  if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
+    return socket;
+  }
 
-  socket = io({
-    transports: ['websocket', 'polling']
-  });
+  socket = new WebSocket(getSocketUrl());
+  setStatus('connecting');
 
-  socket.on('connect', () => {
+  socket.addEventListener('open', () => {
     setStatus('connected');
-    socketIdEl.textContent = `socket: ${socket.id}`;
   });
 
-  socket.on('disconnect', () => {
+  socket.addEventListener('close', () => {
     setStatus('disconnected');
     socketIdEl.textContent = '';
     localPlayerId = null;
+    for (const { reject } of pendingRequests.values()) {
+      reject?.(new Error('socket closed'));
+    }
+    pendingRequests.clear();
   });
 
-  socket.on('hello', (payload) => {
-    // eslint-disable-next-line no-console
-    console.log('hello', payload);
-  });
+  socket.addEventListener('message', (event) => {
+    let message = null;
+    try {
+      message = JSON.parse(event.data);
+    } catch {
+      return;
+    }
 
-  socket.on('room:state', (state) => {
-    currentState = state;
-    renderSidebar();
+    const { type, payload, requestId } = message ?? {};
+
+    if (type === 'hello') {
+      socketIdEl.textContent = `socket: ${payload?.socketId ?? ''}`;
+      return;
+    }
+
+    if (type === 'room:state') {
+      currentState = payload;
+      renderSidebar();
+      return;
+    }
+
+    if (type === 'room:join:ack' && requestId && pendingRequests.has(requestId)) {
+      const { resolve } = pendingRequests.get(requestId);
+      pendingRequests.delete(requestId);
+      resolve?.(payload);
+    }
   });
 
   return socket;
+}
+
+function sendMessage(type, payload, requestId) {
+  if (!socket || socket.readyState !== WebSocket.OPEN) return;
+  const message = { type, payload };
+  if (requestId) message.requestId = requestId;
+  socket.send(JSON.stringify(message));
+}
+
+function waitForOpen(ws) {
+  if (ws.readyState === WebSocket.OPEN) return Promise.resolve();
+
+  return new Promise((resolve, reject) => {
+    const onOpen = () => resolve();
+    const onError = () => reject(new Error('socket error'));
+    ws.addEventListener('open', onOpen, { once: true });
+    ws.addEventListener('error', onError, { once: true });
+  });
+}
+
+function createRequestId() {
+  if (typeof crypto?.randomUUID === 'function') return crypto.randomUUID();
+  return `req_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
 }
 
 function renderSidebar() {
@@ -70,13 +121,21 @@ function renderSidebar() {
 
 async function joinRoom() {
   const s = ensureSocket();
+  await waitForOpen(s);
 
   const roomId = roomEl.value;
   const name = nameEl.value;
 
-  const ack = await new Promise((resolve) => {
-    s.emit('room:join', { roomId, name }, resolve);
-  });
+  const requestId = createRequestId();
+  const ack = await new Promise((resolve, reject) => {
+    pendingRequests.set(requestId, { resolve, reject });
+    sendMessage('room:join', { roomId, name }, requestId);
+    setTimeout(() => {
+      if (!pendingRequests.has(requestId)) return;
+      pendingRequests.delete(requestId);
+      reject(new Error('Join timed out'));
+    }, 5000);
+  }).catch((err) => ({ ok: false, error: err?.message ?? String(err) }));
 
   if (!ack?.ok) {
     alert(ack?.error ?? 'Failed to join');
@@ -88,7 +147,7 @@ async function joinRoom() {
 
 function disconnect() {
   if (!socket) return;
-  socket.disconnect();
+  socket.close();
 }
 
 joinBtn.addEventListener('click', () => {
@@ -122,8 +181,8 @@ window.addEventListener('keyup', (e) => {
 });
 
 setInterval(() => {
-  if (!socket || !socket.connected) return;
-  socket.emit('player:input', keyState);
+  if (!socket || socket.readyState !== WebSocket.OPEN) return;
+  sendMessage('player:input', keyState);
 }, 50);
 
 function draw() {

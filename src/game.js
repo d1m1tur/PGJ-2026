@@ -58,8 +58,8 @@ function safeName(name) {
   return trimmed || 'Player';
 }
 
-export function createGame({ io }) {
-  const rooms = new Map(); // roomId -> { players: Map(socketId->Player), lastUpdateMs }
+export function createGame({ sendToSocket }) {
+  const rooms = new Map(); // roomId -> { players: Map(socketId->Player), sockets: Map(socketId->socket), lastUpdateMs }
   const playerRoom = new Map(); // socketId -> roomId
 
   function getOrCreateRoom(roomId) {
@@ -67,6 +67,7 @@ export function createGame({ io }) {
     if (!room) {
       room = {
         players: new Map(),
+        sockets: new Map(),
         lastUpdateMs: Date.now()
       };
       rooms.set(roomId, room);
@@ -109,11 +110,10 @@ export function createGame({ io }) {
     });
 
     room.players.set(socket.id, player);
+    room.sockets.set(socket.id, socket);
     playerRoom.set(socket.id, cleanRoomId);
 
-    socket.join(cleanRoomId);
-
-    io.to(cleanRoomId).emit('room:state', serializeRoom(cleanRoomId));
+    broadcastRoom(cleanRoomId);
 
     return { roomId: cleanRoomId, playerId: socket.id, world: WORLD };
   }
@@ -125,10 +125,11 @@ export function createGame({ io }) {
     const room = rooms.get(roomId);
     if (room) {
       room.players.delete(socket.id);
+      room.sockets.delete(socket.id);
       if (room.players.size === 0) {
         rooms.delete(roomId);
       } else {
-        io.to(roomId).emit('room:state', serializeRoom(roomId));
+        broadcastRoom(roomId);
       }
     }
 
@@ -153,7 +154,18 @@ export function createGame({ io }) {
       player.update(dtSec, WORLD);
     }
 
-    io.to(roomId).emit('room:state', serializeRoom(roomId));
+    broadcastRoom(roomId);
+  }
+
+  function broadcastRoom(roomId) {
+    const room = rooms.get(roomId);
+    if (!room) return;
+
+    const state = serializeRoom(roomId);
+
+    for (const socket of room.sockets.values()) {
+      sendToSocket(socket, 'room:state', state);
+    }
   }
 
   let intervalHandle = null;

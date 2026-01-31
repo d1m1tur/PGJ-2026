@@ -6,7 +6,11 @@ info:
   description: |
     Async API contract for the real-time multiplayer game.
 
-    Transport: Socket.IO over WebSocket.
+    Transport: WebSocket (JSON messages).
+
+    Message envelope:
+    - Client and server send JSON objects with `type` and `payload`.
+    - Requests may include `requestId`, echoed back in the ack.
 
     Notes:
     - All players visually appear as `appearance: sheep`.
@@ -16,14 +20,14 @@ defaultContentType: application/json
 servers:
   default:
     url: http://localhost:3000
-    protocol: socketio
-    description: Socket.IO server
+    protocol: ws
+    description: WebSocket server
 
 channels:
   hello:
-    description: Sent once after Socket.IO connection.
+    description: Sent once after WebSocket connection.
     subscribe:
-      summary: Receive greeting with your Socket.IO id.
+      summary: Receive greeting with your connection id.
       message:
         $ref: '#/components/messages/Hello'
 
@@ -66,7 +70,7 @@ components:
         properties:
           socketId:
             type: string
-            description: Socket.IO connection id
+            description: WebSocket connection id
             examples: ['Jx2k8u2k3f...']
 
     RoomJoinRequest:
@@ -105,7 +109,7 @@ components:
                 type: string
               playerId:
                 type: string
-                description: Equals your Socket.IO connection id
+                description: Equals your WebSocket connection id
               world:
                 $ref: '#/components/schemas/World'
           - type: object
