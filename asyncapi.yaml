@@ -1,0 +1,208 @@
+asyncapi: '2.6.0'
+id: 'urn:pgj-2026:sheep-wolf-socket-api'
+info:
+  title: PGJ-2026 Sheep & Wolf Socket API
+  version: '0.2.0'
+  description: |
+    Async API contract for the real-time multiplayer game.
+
+    Transport: Socket.IO over WebSocket.
+
+    Notes:
+    - All players visually appear as `appearance: sheep`.
+    - Hidden roles (e.g. wolf) are server-side only and are NOT broadcast in room state.
+
+defaultContentType: application/json
+servers:
+  default:
+    url: http://localhost:3000
+    protocol: socketio
+    description: Socket.IO server
+
+channels:
+  hello:
+    description: Sent once after Socket.IO connection.
+    subscribe:
+      summary: Receive greeting with your Socket.IO id.
+      message:
+        $ref: '#/components/messages/Hello'
+
+  room:join:
+    description: Join (or create) a room.
+    publish:
+      summary: Join a room by id and display name.
+      message:
+        $ref: '#/components/messages/RoomJoinRequest'
+
+  room:join:ack:
+    description: Acknowledgement payload for `room:join`.
+    subscribe:
+      summary: Ack with success/error and assigned player id.
+      message:
+        $ref: '#/components/messages/RoomJoinAck'
+
+  player:input:
+    description: Player movement input (client -> server). Sent frequently.
+    publish:
+      summary: Send movement input state.
+      message:
+        $ref: '#/components/messages/PlayerInput'
+
+  room:state:
+    description: Authoritative room snapshot broadcast by server (20Hz).
+    subscribe:
+      summary: Receive the latest world + player states.
+      message:
+        $ref: '#/components/messages/RoomState'
+
+components:
+  messages:
+    Hello:
+      name: hello
+      payload:
+        type: object
+        additionalProperties: false
+        required: [socketId]
+        properties:
+          socketId:
+            type: string
+            description: Socket.IO connection id
+            examples: ['Jx2k8u2k3f...']
+
+    RoomJoinRequest:
+      name: room:join
+      payload:
+        type: object
+        additionalProperties: false
+        required: [roomId, name]
+        properties:
+          roomId:
+            type: string
+            description: Room identifier (URL-safe)
+            minLength: 1
+            maxLength: 32
+            pattern: '^[a-zA-Z0-9_-]{1,32}$'
+            examples: ['lobby', 'team-1']
+          name:
+            type: string
+            description: Display name (trimmed; max 24 chars)
+            minLength: 1
+            maxLength: 24
+            examples: ['Player', 'Dimitris']
+
+    RoomJoinAck:
+      name: room:join:ack
+      payload:
+        oneOf:
+          - type: object
+            additionalProperties: false
+            required: [ok, roomId, playerId, world]
+            properties:
+              ok:
+                type: boolean
+                const: true
+              roomId:
+                type: string
+              playerId:
+                type: string
+                description: Equals your Socket.IO connection id
+              world:
+                $ref: '#/components/schemas/World'
+          - type: object
+            additionalProperties: false
+            required: [ok, error]
+            properties:
+              ok:
+                type: boolean
+                const: false
+              error:
+                type: string
+                description: Human-readable error message
+
+    PlayerInput:
+      name: player:input
+      payload:
+        type: object
+        additionalProperties: false
+        properties:
+          up: { type: boolean }
+          down: { type: boolean }
+          left: { type: boolean }
+          right: { type: boolean }
+        required: [up, down, left, right]
+
+    RoomState:
+      name: room:state
+      payload:
+        type: object
+        additionalProperties: false
+        required: [roomId, world, players]
+        properties:
+          roomId:
+            type: string
+          world:
+            $ref: '#/components/schemas/World'
+          players:
+            type: array
+            items:
+              $ref: '#/components/schemas/PlayerState'
+
+  schemas:
+    World:
+      type: object
+      additionalProperties: false
+      required: [width, height]
+      properties:
+        width:
+          type: integer
+          minimum: 1
+          examples: [800]
+        height:
+          type: integer
+          minimum: 1
+          examples: [450]
+
+    EntityState:
+      type: object
+      additionalProperties: false
+      required: [id, type, appearance, isAlive, color, x, y]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          description: Entity type (e.g. player)
+          examples: ['player']
+        appearance:
+          type: [string, 'null']
+          description: "Visual identity (players: 'sheep')"
+          examples: ['sheep']
+        isAlive:
+          type: boolean
+        color:
+          type: string
+          description: Hex color (currently used by demo client)
+          pattern: '^#([0-9a-fA-F]{6})$'
+          examples: ['#ffcc00']
+        x:
+          type: integer
+        y:
+          type: integer
+
+    PlayerState:
+      allOf:
+        - $ref: '#/components/schemas/EntityState'
+        - type: object
+          additionalProperties: false
+          required: [name]
+          properties:
+            name:
+              type: string
+              maxLength: 24
+
+x-implementation-notes:
+  tickRateHz: 20
+  serverAuthoritative: true
+  roleVisibility:
+    role: server-only
+    appearance: broadcast

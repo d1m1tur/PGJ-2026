@@ -8,7 +8,8 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "lint": "echo \"(no lint configured)\""
+    "lint": "echo \"(no lint configured)\"",
+    "docs:dev": "npm --prefix docs run dev"
   },
   "dependencies": {
     "express": "^4.19.2",

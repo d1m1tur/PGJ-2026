@@ -1,5 +1,7 @@
 import crypto from 'node:crypto';
 
+import { Player } from './entities/Player.js';
+
 const TICK_RATE_HZ = 20;
 const WORLD = {
   width: 800,
@@ -13,6 +15,32 @@ function clamp(value, min, max) {
 function randomColor() {
   const bytes = crypto.randomBytes(3);
   return `#${bytes.toString('hex')}`;
+}
+
+function countWolves(room) {
+  let wolves = 0;
+  for (const p of room.players.values()) {
+    if (p.role === 'wolf') wolves += 1;
+  }
+  return wolves;
+}
+
+function chooseRoleForJoin(room) {
+  // Prototype-friendly heuristic:
+  // - Keep imposters rare
+  // - Allow at least 1 wolf once a room has a few players
+  const playerCountAfterJoin = room.players.size + 1;
+  const wolvesNow = countWolves(room);
+
+  // Ensure at least one wolf once the room reaches 4+ players
+  if (playerCountAfterJoin >= 4 && wolvesNow === 0) return 'wolf';
+
+  // Cap wolf density to about 1 per 5 players
+  const maxWolves = Math.max(1, Math.floor(playerCountAfterJoin / 5));
+  if (wolvesNow >= maxWolves) return 'sheep';
+
+  // Otherwise, small chance to join as wolf
+  return Math.random() < 0.2 ? 'wolf' : 'sheep';
 }
 
 function safeRoomId(roomId) {
@@ -31,7 +59,7 @@ function safeName(name) {
 }
 
 export function createGame({ io }) {
-  const rooms = new Map(); // roomId -> { players: Map(socketId->player), lastUpdateMs }
+  const rooms = new Map(); // roomId -> { players: Map(socketId->Player), lastUpdateMs }
   const playerRoom = new Map(); // socketId -> roomId
 
   function getOrCreateRoom(roomId) {
@@ -53,13 +81,7 @@ export function createGame({ io }) {
     return {
       roomId,
       world: WORLD,
-      players: [...room.players.values()].map((p) => ({
-        id: p.id,
-        name: p.name,
-        color: p.color,
-        x: Math.round(p.x),
-        y: Math.round(p.y)
-      }))
+      players: [...room.players.values()].map((p) => p.serialize())
     };
   }
 
@@ -74,14 +96,17 @@ export function createGame({ io }) {
 
     const room = getOrCreateRoom(cleanRoomId);
 
-    const player = {
+    const role = chooseRoleForJoin(room);
+
+    const player = new Player({
       id: socket.id,
       name: cleanName,
+      role,
+      appearance: 'sheep',
       color: randomColor(),
       x: 100 + Math.random() * (WORLD.width - 200),
-      y: 100 + Math.random() * (WORLD.height - 200),
-      input: { up: false, down: false, left: false, right: false }
-    };
+      y: 100 + Math.random() * (WORLD.height - 200)
+    });
 
     room.players.set(socket.id, player);
     playerRoom.set(socket.id, cleanRoomId);
@@ -120,25 +145,12 @@ export function createGame({ io }) {
     const player = room.players.get(socket.id);
     if (!player) return;
 
-    const next = input ?? {};
-
-    player.input = {
-      up: Boolean(next.up),
-      down: Boolean(next.down),
-      left: Boolean(next.left),
-      right: Boolean(next.right)
-    };
+    player.setInput(input);
   }
 
   function tickRoom(roomId, room, dtSec) {
-    const speed = 220; // pixels/sec
-
     for (const player of room.players.values()) {
-      const vx = (player.input.right ? 1 : 0) - (player.input.left ? 1 : 0);
-      const vy = (player.input.down ? 1 : 0) - (player.input.up ? 1 : 0);
-
-      player.x = clamp(player.x + vx * speed * dtSec, 10, WORLD.width - 10);
-      player.y = clamp(player.y + vy * speed * dtSec, 10, WORLD.height - 10);
+      player.update(dtSec, WORLD);
     }
 
     io.to(roomId).emit('room:state', serializeRoom(roomId));
