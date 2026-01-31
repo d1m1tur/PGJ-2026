@@ -16,7 +16,7 @@ export class Player extends Entity {
     // Game state
     this.isAlive = true;
 
-    this.input = { up: false, down: false, left: false, right: false };
+    this.input = { x: 0, y: 0 };
 
     // Tweakable movement
     this.speed = 220;
@@ -49,11 +49,13 @@ export class Player extends Entity {
 
   setInput(input) {
     const next = input ?? {};
+    const x = Number.isFinite(next.x) ? next.x : 0;
+    const y = Number.isFinite(next.y) ? next.y : 0;
+    const len = Math.hypot(x, y);
+    const scale = len > 1 ? 1 / len : 1;
     this.input = {
-      up: Boolean(next.up),
-      down: Boolean(next.down),
-      left: Boolean(next.left),
-      right: Boolean(next.right)
+      x: x * scale,
+      y: y * scale
     };
   }
 
@@ -62,8 +64,8 @@ export class Player extends Entity {
 
     if (!this.isAlive) return;
 
-    const vx = (this.input.right ? 1 : 0) - (this.input.left ? 1 : 0);
-    const vy = (this.input.down ? 1 : 0) - (this.input.up ? 1 : 0);
+    const vx = this.input.x;
+    const vy = this.input.y;
 
     this.x = clamp(this.x + vx * this.speed * dtSec, this.radius, world.width - this.radius);
     this.y = clamp(this.y + vy * this.speed * dtSec, this.radius, world.height - this.radius);

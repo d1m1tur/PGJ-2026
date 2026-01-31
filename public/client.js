@@ -6,6 +6,7 @@ const nameEl = document.querySelector('#name');
 const roomEl = document.querySelector('#room');
 const joinBtn = document.querySelector('#join');
 const leaveBtn = document.querySelector('#leave');
+const startBtn = document.querySelector('#start');
 
 const canvas = document.querySelector('#canvas');
 const ctx = canvas.getContext('2d');
@@ -13,6 +14,7 @@ const ctx = canvas.getContext('2d');
 let socket = null;
 let currentState = null;
 let localPlayerId = null;
+let localRole = 'sheep';
 const pendingRequests = new Map();
 
 function getSocketUrl() {
@@ -56,13 +58,19 @@ function ensureSocket() {
 
     const { type, payload, requestId } = message ?? {};
 
-    if (type === 'hello') {
-      socketIdEl.textContent = `socket: ${payload?.socketId ?? ''}`;
+    if (type === 'session:welcome') {
+      socketIdEl.textContent = `session: ${payload?.sessionId ?? ''}`;
       return;
     }
 
     if (type === 'room:state') {
       currentState = payload;
+      renderSidebar();
+      return;
+    }
+
+    if (type === 'room:start') {
+      currentState = currentState ? { ...currentState, started: true } : currentState;
       renderSidebar();
       return;
     }
@@ -107,13 +115,15 @@ function renderSidebar() {
     return;
   }
 
-  roomStateEl.textContent = `${currentState.roomId} (${currentState.players.length} players)`;
+  const status = currentState.started ? 'started' : 'waiting';
+  roomStateEl.textContent = `${currentState.roomId} (${currentState.players.length} players, ${status})`;
 
   playersEl.innerHTML = '';
   for (const p of currentState.players) {
     const li = document.createElement('li');
     const me = p.id === localPlayerId ? ' (you)' : '';
-    li.textContent = `${p.name}${me}`;
+    const roleNote = p.id === localPlayerId && localRole === 'wolf' ? ' (wolf)' : '';
+    li.textContent = `${p.name}${me}${roleNote}`;
     li.style.color = p.color;
     playersEl.appendChild(li);
   }
@@ -143,6 +153,7 @@ async function joinRoom() {
   }
 
   localPlayerId = ack.playerId;
+  localRole = ack.role ?? 'sheep';
 }
 
 function disconnect() {
@@ -156,6 +167,11 @@ joinBtn.addEventListener('click', () => {
 
 leaveBtn.addEventListener('click', () => {
   disconnect();
+});
+
+startBtn.addEventListener('click', () => {
+  if (!socket || socket.readyState !== WebSocket.OPEN) return;
+  sendMessage('room:start', { roomId: roomEl.value });
 });
 
 const keyState = {
@@ -182,7 +198,9 @@ window.addEventListener('keyup', (e) => {
 
 setInterval(() => {
   if (!socket || socket.readyState !== WebSocket.OPEN) return;
-  sendMessage('player:input', keyState);
+  const x = (keyState.right ? 1 : 0) - (keyState.left ? 1 : 0);
+  const y = (keyState.down ? 1 : 0) - (keyState.up ? 1 : 0);
+  sendMessage('player:input', { x, y });
 }, 50);
 
 function draw() {
@@ -208,10 +226,21 @@ function draw() {
 
   if (currentState?.players) {
     for (const p of currentState.players) {
+      const isLocalWolf = p.id === localPlayerId && localRole === 'wolf';
+
       ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, 10, 0, Math.PI * 2);
-      ctx.fill();
+      if (isLocalWolf) {
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y - 12);
+        ctx.lineTo(p.x + 12, p.y + 12);
+        ctx.lineTo(p.x - 12, p.y + 12);
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 10, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
       ctx.fillStyle = '#ffffff';
       ctx.font = '12px ui-sans-serif, system-ui, Segoe UI, Arial';

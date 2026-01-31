@@ -59,7 +59,7 @@ function safeName(name) {
 }
 
 export function createGame({ sendToSocket }) {
-  const rooms = new Map(); // roomId -> { players: Map(socketId->Player), sockets: Map(socketId->socket), lastUpdateMs }
+  const rooms = new Map(); // roomId -> { players: Map(socketId->Player), sockets: Map(socketId->socket), lastUpdateMs, started }
   const playerRoom = new Map(); // socketId -> roomId
 
   function getOrCreateRoom(roomId) {
@@ -68,7 +68,8 @@ export function createGame({ sendToSocket }) {
       room = {
         players: new Map(),
         sockets: new Map(),
-        lastUpdateMs: Date.now()
+        lastUpdateMs: Date.now(),
+        started: false
       };
       rooms.set(roomId, room);
     }
@@ -81,6 +82,7 @@ export function createGame({ sendToSocket }) {
 
     return {
       roomId,
+      started: Boolean(room.started),
       world: WORLD,
       players: [...room.players.values()].map((p) => p.serialize())
     };
@@ -115,7 +117,7 @@ export function createGame({ sendToSocket }) {
 
     broadcastRoom(cleanRoomId);
 
-    return { roomId: cleanRoomId, playerId: socket.id, world: WORLD };
+    return { roomId: cleanRoomId, playerId: socket.id, world: WORLD, role };
   }
 
   function leave({ socket }) {
@@ -149,7 +151,24 @@ export function createGame({ sendToSocket }) {
     player.setInput(input);
   }
 
+  function startRoom({ socket }) {
+    const roomId = playerRoom.get(socket.id);
+    if (!roomId) throw new Error('Not in a room');
+
+    const room = rooms.get(roomId);
+    if (!room) throw new Error('Room not found');
+
+    if (!room.started) {
+      room.started = true;
+      broadcastRoomStart(roomId);
+      broadcastRoom(roomId);
+    }
+
+    return { roomId };
+  }
+
   function tickRoom(roomId, room, dtSec) {
+    if (!room.started) return;
     for (const player of room.players.values()) {
       player.update(dtSec, WORLD);
     }
@@ -165,6 +184,15 @@ export function createGame({ sendToSocket }) {
 
     for (const socket of room.sockets.values()) {
       sendToSocket(socket, 'room:state', state);
+    }
+  }
+
+  function broadcastRoomStart(roomId) {
+    const room = rooms.get(roomId);
+    if (!room) return;
+
+    for (const socket of room.sockets.values()) {
+      sendToSocket(socket, 'room:start', { roomId });
     }
   }
 
@@ -202,6 +230,7 @@ export function createGame({ sendToSocket }) {
     stop,
     joinRoom,
     leave,
-    handleInput
+    handleInput,
+    startRoom
   };
 }

@@ -24,12 +24,12 @@ servers:
     description: WebSocket server
 
 channels:
-  hello:
+  session:welcome:
     description: Sent once after WebSocket connection.
     subscribe:
-      summary: Receive greeting with your connection id.
+      summary: Receive session metadata from the server.
       message:
-        $ref: '#/components/messages/Hello'
+        $ref: '#/components/messages/SessionWelcome'
 
   room:join:
     description: Join (or create) a room.
@@ -59,97 +59,211 @@ channels:
       message:
         $ref: '#/components/messages/RoomState'
 
+  room:start:
+    description: Start the room (server begins ticking and broadcasting).
+    publish:
+      summary: Request the server to start the room.
+      message:
+        $ref: '#/components/messages/RoomStart'
+    subscribe:
+      summary: Notification that the room has started.
+      message:
+        $ref: '#/components/messages/RoomStartNotice'
+
 components:
   messages:
-    Hello:
-      name: hello
+    SessionWelcome:
+      name: session:welcome
       payload:
         type: object
         additionalProperties: false
-        required: [socketId]
+        required: [type, payload]
         properties:
-          socketId:
+          type:
             type: string
-            description: WebSocket connection id
-            examples: ['Jx2k8u2k3f...']
+            const: session:welcome
+          payload:
+            type: object
+            additionalProperties: false
+            required: [sessionId, serverTime, protocolVersion, authRequired]
+            properties:
+              sessionId:
+                type: string
+                description: WebSocket connection id
+                examples: ['Jx2k8u2k3f...']
+              serverTime:
+                type: integer
+                description: Server time in milliseconds since epoch
+                examples: [1706688000000]
+              protocolVersion:
+                type: string
+                description: Server protocol version
+                examples: ['1.0.0']
+              authRequired:
+                type: boolean
+                description: Whether authentication is required
+                examples: [false]
 
     RoomJoinRequest:
       name: room:join
       payload:
         type: object
         additionalProperties: false
-        required: [roomId, name]
+        required: [type, payload]
         properties:
-          roomId:
+          type:
             type: string
-            description: Room identifier (URL-safe)
-            minLength: 1
-            maxLength: 32
-            pattern: '^[a-zA-Z0-9_-]{1,32}$'
-            examples: ['lobby', 'team-1']
-          name:
+            const: room:join
+          requestId:
             type: string
-            description: Display name (trimmed; max 24 chars)
-            minLength: 1
-            maxLength: 24
-            examples: ['Player', 'Dimitris']
+            description: Client-generated id used to correlate the ack
+          payload:
+            type: object
+            additionalProperties: false
+            required: [roomId, name]
+            properties:
+              roomId:
+                type: string
+                description: Room identifier (URL-safe)
+                minLength: 1
+                maxLength: 32
+                pattern: '^[a-zA-Z0-9_-]{1,32}$'
+                examples: ['lobby', 'team-1']
+              name:
+                type: string
+                description: Display name (trimmed; max 24 chars)
+                minLength: 1
+                maxLength: 24
+                examples: ['Player', 'Dimitris']
 
     RoomJoinAck:
       name: room:join:ack
       payload:
-        oneOf:
-          - type: object
-            additionalProperties: false
-            required: [ok, roomId, playerId, world]
-            properties:
-              ok:
-                type: boolean
-                const: true
-              roomId:
-                type: string
-              playerId:
-                type: string
-                description: Equals your WebSocket connection id
-              world:
-                $ref: '#/components/schemas/World'
-          - type: object
-            additionalProperties: false
-            required: [ok, error]
-            properties:
-              ok:
-                type: boolean
-                const: false
-              error:
-                type: string
-                description: Human-readable error message
+        type: object
+        additionalProperties: false
+        required: [type, payload]
+        properties:
+          type:
+            type: string
+            const: room:join:ack
+          requestId:
+            type: string
+            description: Echoes the requestId from the join request
+          payload:
+            oneOf:
+              - type: object
+                additionalProperties: false
+                required: [ok, roomId, playerId, world, role]
+                properties:
+                  ok:
+                    type: boolean
+                    const: true
+                  roomId:
+                    type: string
+                  playerId:
+                    type: string
+                    description: Equals your WebSocket connection id
+                  role:
+                    type: string
+                    description: Local-only role for the joining player
+                    enum: ['sheep', 'wolf']
+                  world:
+                    $ref: '#/components/schemas/World'
+              - type: object
+                additionalProperties: false
+                required: [ok, error]
+                properties:
+                  ok:
+                    type: boolean
+                    const: false
+                  error:
+                    type: string
+                    description: Human-readable error message
 
     PlayerInput:
       name: player:input
       payload:
         type: object
         additionalProperties: false
+        required: [type, payload]
         properties:
-          up: { type: boolean }
-          down: { type: boolean }
-          left: { type: boolean }
-          right: { type: boolean }
-        required: [up, down, left, right]
+          type:
+            type: string
+            const: player:input
+          payload:
+            type: object
+            additionalProperties: false
+            properties:
+              x:
+                type: number
+                description: Movement X axis (-1..1)
+                examples: [0, 1, -1]
+              y:
+                type: number
+                description: Movement Y axis (-1..1)
+                examples: [0, 1, -1]
+            required: [x, y]
 
     RoomState:
       name: room:state
       payload:
         type: object
         additionalProperties: false
-        required: [roomId, world, players]
+        required: [type, payload]
         properties:
-          roomId:
+          type:
             type: string
-          world:
-            $ref: '#/components/schemas/World'
-          players:
-            type: array
-            items:
-              $ref: '#/components/schemas/PlayerState'
+            const: room:state
+          payload:
+            type: object
+            additionalProperties: false
+            required: [roomId, world, players, started]
+            properties:
+              roomId:
+                type: string
+              started:
+                type: boolean
+              world:
+                $ref: '#/components/schemas/World'
+              players:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PlayerState'
+
+    RoomStart:
+      name: room:start
+      payload:
+        type: object
+        additionalProperties: false
+        required: [type]
+        properties:
+          type:
+            type: string
+            const: room:start
+          payload:
+            type: object
+            additionalProperties: false
+            properties:
+              roomId:
+                type: string
+
+    RoomStartNotice:
+      name: room:start
+      payload:
+        type: object
+        additionalProperties: false
+        required: [type, payload]
+        properties:
+          type:
+            type: string
+            const: room:start
+          payload:
+            type: object
+            additionalProperties: false
+            required: [roomId]
+            properties:
+              roomId:
+                type: string
 
   schemas:
     World:

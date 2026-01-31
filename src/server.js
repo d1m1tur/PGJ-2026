@@ -45,7 +45,12 @@ game.start();
 
 wss.on('connection', (socket) => {
   socket.id = crypto.randomUUID();
-  sendToSocket(socket, 'hello', { socketId: socket.id });
+  sendToSocket(socket, 'session:welcome', {
+    sessionId: socket.id,
+    serverTime: Date.now(),
+    protocolVersion: '1.0.0',
+    authRequired: false
+  });
 
   socket.on('message', (data) => {
     const message = parseMessage(data);
@@ -66,6 +71,15 @@ wss.on('connection', (socket) => {
 
     if (type === 'player:input') {
       game.handleInput({ socket, input: payload });
+      return;
+    }
+
+    if (type === 'room:start') {
+      try {
+        game.startRoom({ socket });
+      } catch {
+        // Ignore invalid start requests
+      }
     }
   });
 
