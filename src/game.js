@@ -476,7 +476,7 @@ export function createGame({ sendToSocket, dayLengthMs = DEFAULT_DAY_LENGTH_MS, 
     const map = new Map();
 
     for (const item of items) {
-      const id = typeof item?.id === 'string' && item.id ? item.id : null;
+      const id = typeof item === 'string' && item ? item : null;
       if (!id) continue;
       map.set(id, new Grass({ id }));
     }
@@ -489,7 +489,7 @@ export function createGame({ sendToSocket, dayLengthMs = DEFAULT_DAY_LENGTH_MS, 
     const map = new Map();
 
     for (const item of items) {
-      const id = typeof item?.id === 'string' && item.id ? item.id : null;
+      const id = typeof item === 'string' && item ? item : null;
       if (!id) continue;
 
       map.set(id, new Pen({ id }));

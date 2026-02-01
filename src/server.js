@@ -115,7 +115,7 @@ wss.on('connection', (socket) => {
     const { type, payload } = message;
 
     // eslint-disable-next-line no-console
-    console.log('[ws] incoming', { type, payload });
+    // console.log('[ws] incoming', { type, payload });
 
     if (type === 'RoomJoin') {
       const { roomId, name, requestId } = payload ?? {};
