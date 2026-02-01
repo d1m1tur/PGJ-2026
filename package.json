@@ -6,7 +6,8 @@
   "description": "Node.js + WebSocket server for a multiplayer web game",
   "main": "src/server.js",
   "scripts": {
-    "dev": "nodemon src/server.js",
+    "dev": "concurrently \"npm run dev:server\" \"npm run docs:dev\"",
+    "dev:server": "nodemon src/server.js",
     "start": "node src/server.js",
     "lint": "echo \"(no lint configured)\"",
     "docs:dev": "npm --prefix docs run dev -- --host"
@@ -16,6 +17,7 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
+    "concurrently": "^9.2.0",
     "nodemon": "^3.1.0"
   }
 }
