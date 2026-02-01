@@ -23,10 +23,9 @@ app.get('/health', (_req, res) => {
   res.json({ ok: true });
 });
 
-function sendToSocket(socket, type, payload, requestId) {
+function sendToSocket(socket, type, payload) {
   if (socket.readyState !== WebSocket.OPEN) return;
   const message = { type, payload };
-  if (requestId) message.requestId = requestId;
   socket.send(JSON.stringify(message));
 }
 
@@ -39,13 +38,15 @@ function parseMessage(data) {
   }
 }
 
-const game = createGame({ sendToSocket });
+const game = createGame({
+  sendToSocket,
+});
 
 game.start();
 
 wss.on('connection', (socket) => {
   socket.id = crypto.randomUUID();
-  sendToSocket(socket, 'session:welcome', {
+  sendToSocket(socket, 'SessionWelcome', {
     sessionId: socket.id,
     serverTime: Date.now(),
     protocolVersion: '1.0.0',
@@ -56,30 +57,59 @@ wss.on('connection', (socket) => {
     const message = parseMessage(data);
     if (!message || typeof message !== 'object') return;
 
-    const { type, payload, requestId } = message;
+    const { type, payload } = message;
 
-    if (type === 'room:join') {
-      const { roomId, name } = payload ?? {};
+    // eslint-disable-next-line no-console
+    // console.log('[ws] incoming', { type, payload });
+
+    if (type === 'RoomJoin') {
+      const { roomId, name, requestId } = payload ?? {};
       try {
         const result = game.joinRoom({ socket, roomId, name });
-        sendToSocket(socket, 'room:join:ack', { ok: true, ...result }, requestId);
+        sendToSocket(socket, 'RoomJoinAck', { requestId, ok: true, ...result });
       } catch (err) {
-        sendToSocket(socket, 'room:join:ack', { ok: false, error: err?.message ?? String(err) }, requestId);
+        sendToSocket(socket, 'RoomJoinAck', { requestId, ok: false, error: err?.message ?? String(err) });
       }
       return;
     }
 
-    if (type === 'player:input') {
-      game.handleInput({ socket, input: payload });
+    if (type === 'PlayerPosition') {
+      game.handlePosition({ socket, position: payload });
       return;
     }
 
-    if (type === 'room:start') {
+    if (type === 'PenUpdate') {
+      game.handlePenUpdate({
+        socket,
+        inPen: payload?.inPen,
+        penId: payload?.penId
+      });
+      return;
+    }
+
+    if (type === 'RoomStart') {
       try {
-        game.startRoom({ socket });
+        game.startRoom({ socket, grass: payload?.grass, pens: payload?.pens });
       } catch {
         // Ignore invalid start requests
       }
+      return;
+    }
+
+    if (type === 'RoomStartAck') {
+      game.handleStartAck({
+        socket,
+        startId: payload?.startId,
+        position: payload?.position
+      });
+      return;
+    }
+
+    if (type === 'GrassEat') {
+      game.handleGrassEat({
+        socket,
+        grassId: payload?.grassId
+      });
     }
   });
 

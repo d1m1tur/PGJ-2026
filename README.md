@@ -20,10 +20,11 @@ Then open:
 ## Protocol (overview)
 
 - Client -> Server
-  - `room:join` `{ roomId, name }` (ack: `{ ok, roomId, playerId }`)
-  - `player:input` `{ up, down, left, right }`
+  - `RoomJoin` `{ roomId, name }` (ack: `{ ok, roomId, playerId }`)
+  - `PlayerPosition` `{ x, y }`
 - Server -> Client
-  - `room:state` `{ roomId, world, players: [{ id, name, color, x, y }] }`
+  - `RoomLobby` `{ roomId, players, started }`
+  - `RoomState` `{ roomId, started, players: [{ id, name, color, x, y }] }`
 
 ## Notes
 

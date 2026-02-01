@@ -10,11 +10,20 @@ info:
 
     Message envelope:
     - Client and server send JSON objects with `type` and `payload`.
-    - Requests may include `requestId`, echoed back in the ack.
+    - Requests may include `requestId` inside the `payload`, echoed back in the ack payload.
 
     Notes:
-    - All players visually appear as `appearance: sheep`.
     - Hidden roles (e.g. wolf) are server-side only and are NOT broadcast in room state.
+
+    Flow (high level):
+    1) Client connects → server sends `SessionWelcome`.
+    2) Client sends `RoomJoin` → server replies `RoomJoinAck`.
+    3) Server broadcasts `RoomLobby` updates as players join/leave.
+    4) Host sends `RoomStart` → server broadcasts `RoomStart` (with `startId`, `timeoutMs`).
+    5) Each client replies `RoomStartAck` with position.
+    6) Server assigns roles, sends `PlayerRole`, then starts `RoomState` broadcast loop.
+    7) Clients send `PlayerPosition` regularly after start.
+    8) Clients send `PenUpdate` when they enter or leave a pen.
 
 defaultContentType: application/json
 servers:
@@ -24,56 +33,134 @@ servers:
     description: WebSocket server
 
 channels:
-  session:welcome:
-    description: Sent once after WebSocket connection.
+  # Server -> Client (events)
+  SessionWelcome:
+    description: Server -> Client event. Sent once after WebSocket connection.
     subscribe:
-      summary: Receive session metadata from the server.
+      summary: Server -> Client (event). Receive session metadata.
+      x-requestType: event
       message:
         $ref: '#/components/messages/SessionWelcome'
 
-  room:join:
-    description: Join (or create) a room.
-    publish:
-      summary: Join a room by id and display name.
-      message:
-        $ref: '#/components/messages/RoomJoinRequest'
-
-  room:join:ack:
-    description: Acknowledgement payload for `room:join`.
+  RoomJoinAck:
+    description: Server -> Client ack. Acknowledgement for `RoomJoin`.
     subscribe:
-      summary: Ack with success/error and assigned player id.
+      summary: Server -> Client (ack). Join result.
+      x-requestType: ack
       message:
         $ref: '#/components/messages/RoomJoinAck'
 
-  player:input:
-    description: Player movement input (client -> server). Sent frequently.
-    publish:
-      summary: Send movement input state.
-      message:
-        $ref: '#/components/messages/PlayerInput'
-
-  room:state:
-    description: Authoritative room snapshot broadcast by server (20Hz).
+  RoomLobby:
+    description: Server -> Client event. Lobby updates before the room starts.
     subscribe:
-      summary: Receive the latest world + player states.
+      summary: Server -> Client (event). Lobby player list.
+      x-requestType: event
+      message:
+        $ref: '#/components/messages/RoomLobby'
+
+  RoomState:
+    description: Server -> Client event. Authoritative room snapshot (20Hz).
+    subscribe:
+      summary: Server -> Client (event). Room state broadcast.
+      x-requestType: event
       message:
         $ref: '#/components/messages/RoomState'
 
-  room:start:
-    description: Start the room (server begins ticking and broadcasting).
+  DayStart:
+    description: Server -> Client event. Day started.
+    subscribe:
+      summary: Server -> Client (event). Day start.
+      x-requestType: event
+      message:
+        $ref: '#/components/messages/DayStart'
+
+  DayEnd:
+    description: Server -> Client event. Day ended.
+    subscribe:
+      summary: Server -> Client (event). Day end.
+      x-requestType: event
+      message:
+        $ref: '#/components/messages/DayEnd'
+
+  GameEnd:
+    description: Server -> Client event. Game ended.
+    subscribe:
+      summary: Server -> Client (event). Game end.
+      x-requestType: event
+      message:
+        $ref: '#/components/messages/GameEnd'
+
+  PlayerRole:
+    description: Server -> Client event. Role assigned after room start.
+    subscribe:
+      summary: Server -> Client (event). Receive your role.
+      x-requestType: event
+      message:
+        $ref: '#/components/messages/PlayerRole'
+
+  RoomStart:
+    description: Start handshake.
     publish:
-      summary: Request the server to start the room.
+      summary: Client -> Server (request). Start the room.
+      x-requestType: request
       message:
         $ref: '#/components/messages/RoomStart'
     subscribe:
-      summary: Notification that the room has started.
+      summary: Server -> Client (event). Start handshake request.
+      x-requestType: event
       message:
         $ref: '#/components/messages/RoomStartNotice'
+
+  GrassEat:
+    description: Grass consumption update.
+    publish:
+      summary: Client -> Server (event). Report grass consumption.
+      x-requestType: event
+      message:
+        $ref: '#/components/messages/GrassEat'
+    subscribe:
+      summary: Server -> Client (event). Grass consumption update.
+      x-requestType: event
+      message:
+        $ref: '#/components/messages/GrassEat'
+
+  # Client -> Server (requests/events)
+  RoomJoin:
+    description: Client -> Server request. Join (or create) a room.
+    publish:
+      summary: Client -> Server (request). Join by id + name.
+      x-requestType: request
+      message:
+        $ref: '#/components/messages/RoomJoinRequest'
+
+  RoomStartAck:
+    description: Client -> Server ack. Reply to start handshake.
+    publish:
+      summary: Client -> Server (ack). Provide initial position.
+      x-requestType: ack
+      message:
+        $ref: '#/components/messages/RoomStartAck'
+
+  PlayerPosition:
+    description: Client -> Server event. Player position update (frequent).
+    publish:
+      summary: Client -> Server (event). Send your current position.
+      x-requestType: event
+      message:
+        $ref: '#/components/messages/PlayerPosition'
+
+  PenUpdate:
+    description: Client -> Server event. Player enters or leaves a pen.
+    publish:
+      summary: Client -> Server (event). Update pen state.
+      x-requestType: event
+      message:
+        $ref: '#/components/messages/PenUpdate'
 
 components:
   messages:
     SessionWelcome:
-      name: session:welcome
+      name: SessionWelcome
       payload:
         type: object
         additionalProperties: false
@@ -81,7 +168,7 @@ components:
         properties:
           type:
             type: string
-            const: session:welcome
+            const: SessionWelcome
           payload:
             type: object
             additionalProperties: false
@@ -105,7 +192,7 @@ components:
                 examples: [false]
 
     RoomJoinRequest:
-      name: room:join
+      name: RoomJoin
       payload:
         type: object
         additionalProperties: false
@@ -113,15 +200,15 @@ components:
         properties:
           type:
             type: string
-            const: room:join
-          requestId:
-            type: string
-            description: Client-generated id used to correlate the ack
+            const: RoomJoin
           payload:
             type: object
             additionalProperties: false
             required: [roomId, name]
             properties:
+              requestId:
+                type: string
+                description: Client-generated id used to correlate the ack
               roomId:
                 type: string
                 description: Room identifier (URL-safe)
@@ -137,7 +224,7 @@ components:
                 examples: ['Player', 'Dimitris']
 
     RoomJoinAck:
-      name: room:join:ack
+      name: RoomJoinAck
       payload:
         type: object
         additionalProperties: false
@@ -145,16 +232,15 @@ components:
         properties:
           type:
             type: string
-            const: room:join:ack
-          requestId:
-            type: string
-            description: Echoes the requestId from the join request
+            const: RoomJoinAck
           payload:
             oneOf:
               - type: object
                 additionalProperties: false
-                required: [ok, roomId, playerId, world, role]
+                required: [requestId, ok, roomId, playerId]
                 properties:
+                  requestId:
+                    type: string
                   ok:
                     type: boolean
                     const: true
@@ -163,16 +249,12 @@ components:
                   playerId:
                     type: string
                     description: Equals your WebSocket connection id
-                  role:
-                    type: string
-                    description: Local-only role for the joining player
-                    enum: ['sheep', 'wolf']
-                  world:
-                    $ref: '#/components/schemas/World'
               - type: object
                 additionalProperties: false
-                required: [ok, error]
+                required: [requestId, ok, error]
                 properties:
+                  requestId:
+                    type: string
                   ok:
                     type: boolean
                     const: false
@@ -180,8 +262,8 @@ components:
                     type: string
                     description: Human-readable error message
 
-    PlayerInput:
-      name: player:input
+    PlayerPosition:
+      name: PlayerPosition
       payload:
         type: object
         additionalProperties: false
@@ -189,23 +271,23 @@ components:
         properties:
           type:
             type: string
-            const: player:input
+            const: PlayerPosition
           payload:
             type: object
             additionalProperties: false
             properties:
               x:
                 type: number
-                description: Movement X axis (-1..1)
-                examples: [0, 1, -1]
+                description: Player X position
+                examples: [120, 400]
               y:
                 type: number
-                description: Movement Y axis (-1..1)
-                examples: [0, 1, -1]
+                description: Player Y position
+                examples: [200, 320]
             required: [x, y]
 
-    RoomState:
-      name: room:state
+    PenUpdate:
+      name: PenUpdate
       payload:
         type: object
         additionalProperties: false
@@ -213,25 +295,56 @@ components:
         properties:
           type:
             type: string
-            const: room:state
+            const: PenUpdate
           payload:
             type: object
             additionalProperties: false
-            required: [roomId, world, players, started]
+            required: [inPen]
+            properties:
+              inPen:
+                type: boolean
+                description: Whether the player is currently inside a pen
+              penId:
+                type: string
+                description: Pen id when inside a pen
+
+    RoomState:
+      name: RoomState
+      payload:
+        type: object
+        additionalProperties: false
+        required: [type, payload]
+        properties:
+          type:
+            type: string
+            const: RoomState
+          payload:
+            type: object
+            additionalProperties: false
+            required: [roomId, players, started, ended, day, totalDays, dayEndsAt]
             properties:
               roomId:
                 type: string
               started:
                 type: boolean
-              world:
-                $ref: '#/components/schemas/World'
+              ended:
+                type: boolean
+              day:
+                type: integer
+                minimum: 0
+              totalDays:
+                type: integer
+                minimum: 1
+              dayEndsAt:
+                type: integer
+                description: Timestamp (ms) when the current day ends
               players:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlayerState'
 
     RoomStart:
-      name: room:start
+      name: RoomStart
       payload:
         type: object
         additionalProperties: false
@@ -239,16 +352,38 @@ components:
         properties:
           type:
             type: string
-            const: room:start
+            const: RoomStart
           payload:
             type: object
             additionalProperties: false
             properties:
               roomId:
                 type: string
+              grass:
+                type: array
+                description: Initial grass spawn ids generated by the client
+                items:
+                  type: object
+                  additionalProperties: false
+                  required: [id]
+                  properties:
+                    id:
+                      type: string
+                      description: Grass entity id (spawn point id)
+              pens:
+                type: array
+                description: Initial pen spawn ids generated by the client
+                items:
+                  type: object
+                  additionalProperties: false
+                  required: [id]
+                  properties:
+                    id:
+                      type: string
+                      description: Pen entity id (spawn point id)
 
     RoomStartNotice:
-      name: room:start
+      name: RoomStart
       payload:
         type: object
         additionalProperties: false
@@ -256,34 +391,196 @@ components:
         properties:
           type:
             type: string
-            const: room:start
+            const: RoomStart
           payload:
             type: object
             additionalProperties: false
-            required: [roomId]
+            required: [roomId, startId, timeoutMs]
             properties:
               roomId:
                 type: string
+              startId:
+                type: string
+                description: Start handshake id
+              timeoutMs:
+                type: integer
+                description: Time allowed for acks
+              grass:
+                type: array
+                description: Grass spawn ids for the room
+                items:
+                  type: string
+              pens:
+                type: array
+                description: Pen spawn ids for the room
+                items:
+                  type: string
+
+    RoomStartAck:
+      name: RoomStartAck
+      payload:
+        type: object
+        additionalProperties: false
+        required: [type, payload]
+        properties:
+          type:
+            type: string
+            const: RoomStartAck
+          payload:
+            type: object
+            additionalProperties: false
+            required: [startId, position]
+            properties:
+              startId:
+                type: string
+              position:
+                type: object
+                additionalProperties: false
+                required: [x, y]
+                properties:
+                  x:
+                    type: number
+                  y:
+                    type: number
+
+    GrassEat:
+      name: GrassEat
+      payload:
+        type: object
+        additionalProperties: false
+        required: [type, payload]
+        properties:
+          type:
+            type: string
+            const: GrassEat
+          payload:
+            type: object
+            additionalProperties: false
+            required: [grassId]
+            properties:
+              grassId:
+                type: string
+
+    PlayerRole:
+      name: PlayerRole
+      payload:
+        type: object
+        additionalProperties: false
+        required: [type, payload]
+        properties:
+          type:
+            type: string
+            const: PlayerRole
+          payload:
+            type: object
+            additionalProperties: false
+            required: [roomId, role]
+            properties:
+              roomId:
+                type: string
+              role:
+                type: string
+                enum: ['sheep', 'wolf']
+
+    DayStart:
+      name: DayStart
+      payload:
+        type: object
+        additionalProperties: false
+        required: [type, payload]
+        properties:
+          type:
+            type: string
+            const: DayStart
+          payload:
+            type: object
+            additionalProperties: false
+            required: [roomId, day, dayEndsAt]
+            properties:
+              roomId:
+                type: string
+              day:
+                type: integer
+                minimum: 1
+              dayEndsAt:
+                type: integer
+                description: Timestamp (ms) when the day ends
+
+    DayEnd:
+      name: DayEnd
+      payload:
+        type: object
+        additionalProperties: false
+        required: [type, payload]
+        properties:
+          type:
+            type: string
+            const: DayEnd
+          payload:
+            type: object
+            additionalProperties: false
+            required: [roomId, day]
+            properties:
+              roomId:
+                type: string
+              day:
+                type: integer
+                minimum: 1
+
+    GameEnd:
+      name: GameEnd
+      payload:
+        type: object
+        additionalProperties: false
+        required: [type, payload]
+        properties:
+          type:
+            type: string
+            const: GameEnd
+          payload:
+            type: object
+            additionalProperties: false
+            required: [roomId, winner, reason]
+            properties:
+              roomId:
+                type: string
+              winner:
+                type: string
+                enum: [sheep, wolves]
+              reason:
+                type: integer
+                enum: [0, 1, 2]
+                x-enumNames: [WOLVES_ELIMINATED, SHEEP_ELIMINATED, SURVIVED_DAYS]
+
+    RoomLobby:
+      name: RoomLobby
+      payload:
+        type: object
+        additionalProperties: false
+        required: [type, payload]
+        properties:
+          type:
+            type: string
+            const: RoomLobby
+          payload:
+            type: object
+            additionalProperties: false
+            required: [roomId, players, started]
+            properties:
+              roomId:
+                type: string
+              players:
+                type: array
+                items:
+                  type: string
+              started:
+                type: boolean
 
   schemas:
-    World:
-      type: object
-      additionalProperties: false
-      required: [width, height]
-      properties:
-        width:
-          type: integer
-          minimum: 1
-          examples: [800]
-        height:
-          type: integer
-          minimum: 1
-          examples: [450]
-
     EntityState:
       type: object
       additionalProperties: false
-      required: [id, type, appearance, isAlive, color, x, y]
+      required: [id, type, color, x, y]
       properties:
         id:
           type: string
@@ -291,12 +588,6 @@ components:
           type: string
           description: Entity type (e.g. player)
           examples: ['player']
-        appearance:
-          type: [string, 'null']
-          description: "Visual identity (players: 'sheep')"
-          examples: ['sheep']
-        isAlive:
-          type: boolean
         color:
           type: string
           description: Hex color (currently used by demo client)
@@ -312,15 +603,25 @@ components:
         - $ref: '#/components/schemas/EntityState'
         - type: object
           additionalProperties: false
-          required: [name]
+          required: [name, isAlive, inPen]
           properties:
             name:
               type: string
               maxLength: 24
+            isAlive:
+              type: boolean
+            inPen:
+              type: boolean
+            penId:
+              type: string
+            deathReason:
+              type: integer
+              description: Reason for death (if applicable)
+              enum: [0, 1, 2, 3]
+              x-enumNames: [WOLF_IN_PEN, NOT_IN_PEN, NOT_ENOUGH_GRASS, WOLF_HUNGER]
 
 x-implementation-notes:
   tickRateHz: 20
   serverAuthoritative: true
   roleVisibility:
     role: server-only
-    appearance: broadcast

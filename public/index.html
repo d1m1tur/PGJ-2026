@@ -20,6 +20,48 @@
       ul { margin: 8px 0 0; padding-left: 18px; }
       li { margin: 4px 0; }
       .badge { display:inline-block; padding:2px 8px; border-radius: 999px; border:1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.06); }
+      .death-screen {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(4, 6, 14, 0.9);
+        z-index: 10;
+      }
+      .death-screen.is-visible { display: flex; }
+      .death-card {
+        max-width: 420px;
+        text-align: center;
+        padding: 24px 28px;
+        border-radius: 16px;
+        background: rgba(16, 22, 44, 0.9);
+        border: 1px solid rgba(255,255,255,0.12);
+        box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+      }
+      .death-card h2 { margin: 0 0 8px; font-size: 24px; }
+      .death-card p { margin: 0; opacity: 0.85; }
+      .end-screen {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(6, 8, 18, 0.92);
+        z-index: 9;
+      }
+      .end-screen.is-visible { display: flex; }
+      .end-card {
+        max-width: 460px;
+        text-align: center;
+        padding: 26px 30px;
+        border-radius: 16px;
+        background: rgba(18, 26, 52, 0.92);
+        border: 1px solid rgba(255,255,255,0.12);
+        box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+      }
+      .end-card h2 { margin: 0 0 8px; font-size: 24px; }
+      .end-card p { margin: 0; opacity: 0.85; }
     </style>
   </head>
   <body>
@@ -53,6 +95,19 @@
         <canvas id="canvas" width="800" height="450"></canvas>
       </section>
     </main>
+
+    <div id="deathScreen" class="death-screen" aria-live="polite">
+      <div class="death-card">
+        <h2>You died</h2>
+        <p id="deathReason">(reason)</p>
+      </div>
+    </div>
+    <div id="endScreen" class="end-screen" aria-live="polite">
+      <div class="end-card">
+        <h2 id="endTitle">Game ended</h2>
+        <p id="endReason">(reason)</p>
+      </div>
+    </div>
 
     <script type="module" src="/client.js"></script>
   </body>
