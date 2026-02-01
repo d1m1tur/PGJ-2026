@@ -10,6 +10,11 @@ const repoRoot = path.resolve(__dirname, '..')
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  base: '/docs/',
+  build: {
+    outDir: path.resolve(repoRoot, 'public', 'docs'),
+    emptyOutDir: true
+  },
   server: {
     fs: {
       allow: [repoRoot]
