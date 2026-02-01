@@ -40,6 +40,9 @@ let inPen = false;
 let currentPenId = null;
 const penCount = 4;
 const penSize = 30;
+const WORLD_WIDTH = 800;
+const WORLD_HEIGHT = 450;
+const PLAYER_RADIUS = 10;
 const spawnPoints = buildSpawnPoints();
 const spawnPointsById = new Map(spawnPoints.map((point) => [point.id, point]));
 const grassEatRadius = 14;
@@ -183,6 +186,7 @@ function ensureSocket() {
     }
 
     if (type === 'RoomStart') {
+      console.log('Starting room...', payload);
       setLoading(true);
       if (Array.isArray(payload?.grass)) {
         localGrassIds = payload.grass.map((item) => (typeof item === 'string' ? item : item?.id)).filter(Boolean);
@@ -196,9 +200,11 @@ function ensureSocket() {
       inPen = false;
       currentPenId = null;
       const padding = 30;
-      const randX = padding + Math.random() * (canvas.width - padding * 2);
-      const randY = padding + Math.random() * (canvas.height - padding * 2);
-      localPosition = { x: randX, y: randY, z: 0 };
+      const randX = padding + Math.random() * (WORLD_WIDTH - padding * 2);
+      const randY = padding + Math.random() * (WORLD_HEIGHT - padding * 2);
+      const safeX = clamp(randX, PLAYER_RADIUS, WORLD_WIDTH - PLAYER_RADIUS);
+      const safeY = clamp(randY, PLAYER_RADIUS, WORLD_HEIGHT - PLAYER_RADIUS);
+      localPosition = { x: safeX, y: safeY, z: 0 };
       sendMessage('RoomStartAck', {
         startId: payload?.startId,
         position: localPosition
@@ -310,6 +316,17 @@ function resizeCanvasToDisplaySize() {
   }
 }
 
+function getRenderTransform() {
+  const scale = Math.min(canvas.width / WORLD_WIDTH, canvas.height / WORLD_HEIGHT);
+  const offsetX = (canvas.width - WORLD_WIDTH * scale) / 2;
+  const offsetY = (canvas.height - WORLD_HEIGHT * scale) / 2;
+  return { scale, offsetX, offsetY };
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
 function sendMessage(type, payload, requestId) {
   if (!socket || socket.readyState !== WebSocket.OPEN) return;
   const message = { type, payload };
@@ -337,10 +354,10 @@ function buildSpawnPoints() {
   const points = [];
   const cols = 8;
   const rows = 5;
-  const paddingX = canvas.width * 0.08;
-  const paddingY = canvas.height * 0.12;
-  const usableW = canvas.width - paddingX * 2;
-  const usableH = canvas.height - paddingY * 2;
+  const paddingX = WORLD_WIDTH * 0.08;
+  const paddingY = WORLD_HEIGHT * 0.12;
+  const usableW = WORLD_WIDTH - paddingX * 2;
+  const usableH = WORLD_HEIGHT - paddingY * 2;
   for (let y = 0; y < rows; y += 1) {
     for (let x = 0; x < cols; x += 1) {
       const px = paddingX + (usableW * x) / Math.max(1, cols - 1);
@@ -444,7 +461,9 @@ function syncLocalPositionFromState() {
   if (!currentState?.players || !localPlayerId) return;
   const me = currentState.players.find((p) => p.id === localPlayerId);
   if (!me) return;
-  localPosition = { x: me.x, y: me.y, z: Number.isFinite(me.z) ? me.z : 0 };
+  const x = clamp(me.x, PLAYER_RADIUS, WORLD_WIDTH - PLAYER_RADIUS);
+  const y = clamp(me.y, PLAYER_RADIUS, WORLD_HEIGHT - PLAYER_RADIUS);
+  localPosition = { x, y, z: Number.isFinite(me.z) ? me.z : 0 };
 }
 
 function distance(a, b) {
@@ -572,6 +591,8 @@ setInterval(() => {
   const dtSec = 0.05;
   localPosition.x = localPosition.x + vx * localSpeed * dtSec;
   localPosition.y = localPosition.y + vy * localSpeed * dtSec;
+  localPosition.x = clamp(localPosition.x, PLAYER_RADIUS, WORLD_WIDTH - PLAYER_RADIUS);
+  localPosition.y = clamp(localPosition.y, PLAYER_RADIUS, WORLD_HEIGHT - PLAYER_RADIUS);
 
   sendMessage('PlayerPosition', { x: localPosition.x, y: localPosition.y, z: localPosition.z });
 
@@ -618,24 +639,49 @@ setInterval(() => {
 }, 1000);
 
 function draw() {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const { scale, offsetX, offsetY } = getRenderTransform();
+  ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
+
+  // Background art
+  const gradient = ctx.createLinearGradient(0, 0, 0, WORLD_HEIGHT);
+  gradient.addColorStop(0, '#0b1430');
+  gradient.addColorStop(1, '#091220');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+
+  ctx.save();
+  ctx.globalAlpha = 0.2;
+  ctx.fillStyle = '#1d2a55';
+  ctx.beginPath();
+  ctx.arc(140, WORLD_HEIGHT + 40, 180, Math.PI, Math.PI * 2);
+  ctx.arc(520, WORLD_HEIGHT + 60, 220, Math.PI, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
 
   // Background grid
   ctx.save();
   ctx.globalAlpha = 0.12;
   ctx.strokeStyle = '#88a0ff';
-  for (let x = 0; x <= canvas.width; x += 40) {
+  for (let x = 0; x <= WORLD_WIDTH; x += 40) {
     ctx.beginPath();
     ctx.moveTo(x, 0);
-    ctx.lineTo(x, canvas.height);
+    ctx.lineTo(x, WORLD_HEIGHT);
     ctx.stroke();
   }
-  for (let y = 0; y <= canvas.height; y += 40) {
+  for (let y = 0; y <= WORLD_HEIGHT; y += 40) {
     ctx.beginPath();
     ctx.moveTo(0, y);
-    ctx.lineTo(canvas.width, y);
+    ctx.lineTo(WORLD_WIDTH, y);
     ctx.stroke();
   }
+  ctx.restore();
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(8, 8, WORLD_WIDTH - 16, WORLD_HEIGHT - 16);
   ctx.restore();
 
   if (localGrassIds.length > 0) {
@@ -666,25 +712,27 @@ function draw() {
     for (const p of currentState.players) {
       if (p.isAlive === false) continue;
       const isLocalWolf = p.id === localPlayerId && localRole === 'wolf';
+      const px = clamp(p.x, PLAYER_RADIUS, WORLD_WIDTH - PLAYER_RADIUS);
+      const py = clamp(p.y, PLAYER_RADIUS, WORLD_HEIGHT - PLAYER_RADIUS);
 
       ctx.fillStyle = p.color;
       if (isLocalWolf) {
         ctx.beginPath();
-        ctx.moveTo(p.x, p.y - 12);
-        ctx.lineTo(p.x + 12, p.y + 12);
-        ctx.lineTo(p.x - 12, p.y + 12);
+        ctx.moveTo(px, py - 12);
+        ctx.lineTo(px + 12, py + 12);
+        ctx.lineTo(px - 12, py + 12);
         ctx.closePath();
         ctx.fill();
       } else {
         ctx.beginPath();
-        ctx.arc(p.x, p.y, 10, 0, Math.PI * 2);
+        ctx.arc(px, py, PLAYER_RADIUS, 0, Math.PI * 2);
         ctx.fill();
       }
 
       ctx.fillStyle = '#ffffff';
       ctx.font = '12px ui-sans-serif, system-ui, Segoe UI, Arial';
       const label = p.id === localPlayerId ? `${p.name} (you)` : p.name;
-      ctx.fillText(label, p.x + 14, p.y + 4);
+      ctx.fillText(label, px + 14, py + 4);
     }
   }
 
