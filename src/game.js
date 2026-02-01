@@ -198,7 +198,8 @@ export function createGame({ sendToSocket, dayLengthMs = DEFAULT_DAY_LENGTH_MS, 
     const player = room.players.get(socket.id);
     if (!player || !player.isAlive) return;
 
-    const validPenId = typeof penId === 'string' && room.pens.has(penId) ? penId : null;
+    // const validPenId = typeof penId === 'string' && room.pens.has(penId) ? penId : null;
+    validPenId = penId;
     const nextInPen = Boolean(inPen) && Boolean(validPenId);
 
     player.inPen = nextInPen;
@@ -212,7 +213,7 @@ export function createGame({ sendToSocket, dayLengthMs = DEFAULT_DAY_LENGTH_MS, 
     const room = rooms.get(roomId);
     if (!room || !room.started || room.ended) return;
 
-    const grass = room.grass.get(grassId);
+    const grass = room.grass[grassId];
     if (!grass) return;
 
     grass.setHealth(grass.health - 1);
@@ -225,7 +226,7 @@ export function createGame({ sendToSocket, dayLengthMs = DEFAULT_DAY_LENGTH_MS, 
 
     if (grass.health > 0) return;
 
-    room.grass.delete(grassId);
+    delete room.grass[grassId];
     broadcastGrassEat(roomId, { grassId });
   }
 
