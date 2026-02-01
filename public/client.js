@@ -12,6 +12,11 @@ const deathReasonEl = document.querySelector('#deathReason');
 const endScreenEl = document.querySelector('#endScreen');
 const endTitleEl = document.querySelector('#endTitle');
 const endReasonEl = document.querySelector('#endReason');
+const mapLoaderEl = document.querySelector('#mapLoader');
+const touchUpEl = document.querySelector('#touchUp');
+const touchDownEl = document.querySelector('#touchDown');
+const touchLeftEl = document.querySelector('#touchLeft');
+const touchRightEl = document.querySelector('#touchRight');
 
 const canvas = document.querySelector('#canvas');
 const ctx = canvas.getContext('2d');
@@ -54,6 +59,18 @@ function getSocketUrl() {
 
 function setStatus(text) {
   statusEl.textContent = text;
+}
+
+function setLoading(isLoading) {
+  if (!mapLoaderEl) return;
+  mapLoaderEl.classList.toggle('is-visible', Boolean(isLoading));
+}
+
+function updateControlState() {
+  const connected = socket && socket.readyState === WebSocket.OPEN;
+  joinBtn.disabled = connected;
+  leaveBtn.disabled = !connected;
+  startBtn.disabled = !connected;
 }
 
 function formatDeathReason(reason) {
@@ -112,12 +129,15 @@ function ensureSocket() {
 
   socket.addEventListener('open', () => {
     setStatus('connected');
+    updateControlState();
   });
 
   socket.addEventListener('close', () => {
     setStatus('disconnected');
     socketIdEl.textContent = '';
     localPlayerId = null;
+    setLoading(false);
+    updateControlState();
     for (const { reject } of pendingRequests.values()) {
       reject?.(new Error('socket closed'));
     }
@@ -148,6 +168,7 @@ function ensureSocket() {
         ended: payload?.ended,
         started: payload?.started
       };
+      setLoading(false);
       syncLocalPositionFromState();
       updateDeathScreen();
       updateEndScreen();
@@ -162,6 +183,7 @@ function ensureSocket() {
     }
 
     if (type === 'RoomStart') {
+      setLoading(true);
       if (Array.isArray(payload?.grass)) {
         localGrassIds = payload.grass.map((item) => (typeof item === 'string' ? item : item?.id)).filter(Boolean);
       }
@@ -255,6 +277,37 @@ function ensureSocket() {
   });
 
   return socket;
+}
+
+function bindTouchButton(element, direction) {
+  if (!element) return;
+  const setPressed = (pressed) => {
+    setKey(direction, pressed);
+  };
+
+  element.addEventListener('pointerdown', (event) => {
+    event.preventDefault();
+    element.setPointerCapture(event.pointerId);
+    setPressed(true);
+  });
+
+  const release = () => setPressed(false);
+
+  element.addEventListener('pointerup', release);
+  element.addEventListener('pointercancel', release);
+  element.addEventListener('pointerleave', release);
+}
+
+function resizeCanvasToDisplaySize() {
+  const ratio = window.devicePixelRatio || 1;
+  const displayWidth = canvas.clientWidth;
+  const displayHeight = canvas.clientHeight;
+  const width = Math.max(1, Math.round(displayWidth * ratio));
+  const height = Math.max(1, Math.round(displayHeight * ratio));
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+  }
 }
 
 function sendMessage(type, payload, requestId) {
@@ -435,6 +488,7 @@ async function joinRoom() {
   localRole = 'sheep';
   currentState = null;
   lobbyInfo = null;
+  setLoading(false);
 }
 
 function disconnect() {
@@ -448,6 +502,7 @@ function disconnect() {
   pens = [];
   inPen = false;
   currentPenId = null;
+  setLoading(false);
   updateDeathScreen();
   updateEndScreen();
 }
@@ -468,6 +523,11 @@ startBtn.addEventListener('click', () => {
     pens: generatePenPositions()
   });
 });
+
+bindTouchButton(touchUpEl, 'KeyW');
+bindTouchButton(touchDownEl, 'KeyS');
+bindTouchButton(touchLeftEl, 'KeyA');
+bindTouchButton(touchRightEl, 'KeyD');
 
 const keyState = {
   up: false,
@@ -490,6 +550,14 @@ window.addEventListener('keydown', (e) => {
 window.addEventListener('keyup', (e) => {
   setKey(e.code, false);
 });
+
+window.addEventListener('resize', () => {
+  resizeCanvasToDisplaySize();
+});
+
+updateControlState();
+setLoading(false);
+resizeCanvasToDisplaySize();
 
 setInterval(() => {
   if (!socket || socket.readyState !== WebSocket.OPEN) return;

@@ -6,14 +6,39 @@
     <title>PGJ Multiplayer Demo</title>
     <style>
       :root { color-scheme: dark; }
-      body { margin: 0; font-family: ui-sans-serif, system-ui, Segoe UI, Arial; background:#0b1020; color:#e6e8ff; }
+      body { margin: 0; font-family: ui-sans-serif, system-ui, Segoe UI, Arial; background:#0b1020; color:#e6e8ff; -webkit-tap-highlight-color: transparent; }
       header { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.08); display:flex; gap:12px; align-items:center; }
-      input, button { background:#121a33; color:#e6e8ff; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 10px 12px; }
+      input, button { background:#121a33; color:#e6e8ff; border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 10px 12px; }
       button { cursor: pointer; }
       button:hover { border-color: rgba(255,255,255,0.25); }
+      button:disabled { opacity: 0.6; cursor: not-allowed; }
       main { display: grid; grid-template-columns: 320px 1fr; gap: 12px; padding: 12px; }
       .panel { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px; }
-      #canvas { width: 100%; height: auto; background: #060a14; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); }
+      .canvas-wrap { position: relative; }
+      #canvas { width: 100%; height: auto; background: #060a14; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); display:block; }
+      .loader {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        background: rgba(6, 10, 20, 0.82);
+        border-radius: 12px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+      }
+      .loader.is-visible { opacity: 1; pointer-events: auto; }
+      .spinner {
+        width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        border: 2px solid rgba(255,255,255,0.25);
+        border-top-color: #9fb3ff;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
       .row { display:flex; gap: 8px; align-items:center; margin-bottom: 8px; }
       .hint { opacity: 0.75; font-size: 12px; line-height: 1.4; }
       .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; opacity: 0.9; }
@@ -62,6 +87,35 @@
       }
       .end-card h2 { margin: 0 0 8px; font-size: 24px; }
       .end-card p { margin: 0; opacity: 0.85; }
+      .controls {
+        display: grid;
+        grid-template-columns: repeat(3, 64px);
+        grid-template-rows: repeat(3, 64px);
+        gap: 8px;
+        justify-content: center;
+        margin-top: 8px;
+      }
+      .touch-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 14px;
+        background: rgba(18, 26, 52, 0.9);
+        border: 1px solid rgba(255,255,255,0.14);
+        font-size: 18px;
+        user-select: none;
+        touch-action: none;
+      }
+      .touch-btn:active { background: rgba(44, 62, 120, 0.9); }
+
+      @media (max-width: 900px) {
+        header { flex-wrap: wrap; }
+        main { grid-template-columns: 1fr; }
+        .row { flex-wrap: wrap; }
+        input { flex: 1 1 140px; min-width: 120px; }
+        .panel { order: 2; }
+        #canvas { min-height: 260px; }
+      }
     </style>
   </head>
   <body>
@@ -84,6 +138,19 @@
         </div>
         <div class="hint">Move with <span class="badge">W</span><span class="badge">A</span><span class="badge">S</span><span class="badge">D</span> or arrow keys. This demo sends input to the server; the server is authoritative and broadcasts state at 20Hz.</div>
 
+        <h3>Mobile controls</h3>
+        <div class="controls" aria-label="Touch controls">
+          <span></span>
+          <div id="touchUp" class="touch-btn">▲</div>
+          <span></span>
+          <div id="touchLeft" class="touch-btn">◀</div>
+          <div class="touch-btn" aria-hidden="true" style="opacity:0.35">●</div>
+          <div id="touchRight" class="touch-btn">▶</div>
+          <span></span>
+          <div id="touchDown" class="touch-btn">▼</div>
+          <span></span>
+        </div>
+
         <h3>Players</h3>
         <ul id="players"></ul>
 
@@ -92,7 +159,13 @@
       </section>
 
       <section>
-        <canvas id="canvas" width="800" height="450"></canvas>
+        <div class="canvas-wrap">
+          <canvas id="canvas" width="800" height="450"></canvas>
+          <div id="mapLoader" class="loader" aria-live="polite">
+            <div class="spinner"></div>
+            <span>Loading room…</span>
+          </div>
+        </div>
       </section>
     </main>
 
