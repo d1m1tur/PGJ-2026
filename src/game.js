@@ -9,7 +9,7 @@ const TICK_RATE_HZ = 20;
 const DEFAULT_DAY_LENGTH_MS = 60000;
 const DEFAULT_TOTAL_DAYS = 5;
 const GRASS_PER_SHEEP_PER_DAY = 3;
-const USER_START_TIMEOUT_MS = 10000;
+const USER_START_TIMEOUT_MS = 3000;
 const GOD_MODE = false;
 
 const GAME_END_REASONS = Object.freeze({
@@ -155,6 +155,16 @@ export function createGame({ sendToSocket, dayLengthMs = DEFAULT_DAY_LENGTH_MS, 
     playerRoom.delete(socket.id);
   }
 
+  function removePlayerFromRoom(roomId, playerId) {
+    const room = rooms.get(roomId);
+    if (!room) return;
+
+    room.players.delete(playerId);
+    room.sockets.delete(playerId);
+    room.pendingStartAcks?.delete(playerId);
+    playerRoom.delete(playerId);
+  }
+
   function handlePosition({ socket, position }) {
     const roomId = playerRoom.get(socket.id);
     if (!roomId) return;
@@ -256,7 +266,7 @@ export function createGame({ sendToSocket, dayLengthMs = DEFAULT_DAY_LENGTH_MS, 
 
     room.pendingStartAcks?.delete(socket.id);
     if (room.pendingStartAcks?.size === 0) {
-      finalizeRoomStart(roomId);
+      // finalizeRoomStart(roomId);
     }
   }
 
@@ -492,6 +502,17 @@ export function createGame({ sendToSocket, dayLengthMs = DEFAULT_DAY_LENGTH_MS, 
   function finalizeRoomStart(roomId) {
     const room = rooms.get(roomId);
     if (!room || room.started) return;
+
+    const missingAcks = room.pendingStartAcks ? [...room.pendingStartAcks] : [];
+    for (const playerId of missingAcks) {
+      removePlayerFromRoom(roomId, playerId);
+    }
+
+    if (room.players.size === 0) {
+      clearRoomStart(room);
+      rooms.delete(roomId);
+      return;
+    }
 
     clearRoomStart(room);
     room.ended = false;

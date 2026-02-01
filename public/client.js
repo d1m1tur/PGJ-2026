@@ -242,7 +242,6 @@ function ensureSocket() {
         started: false
       };
       grassEatenToday = 0;
-      console.log('Game ended', gameEndState);
       updateEndScreen();
       renderSidebar();
       return;
