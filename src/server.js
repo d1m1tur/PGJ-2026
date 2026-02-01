@@ -1,7 +1,9 @@
 import crypto from 'node:crypto';
+import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import zlib from 'node:zlib';
 
 import express from 'express';
 import { WebSocket, WebSocketServer } from 'ws';
@@ -16,16 +18,58 @@ const PORT = Number.parseInt(process.env.PORT ?? '3000', 10);
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
+const publicDir = path.join(__dirname, '..', 'public');
+
+function getUnityContentType(filePath) {
+  if (filePath.includes('.wasm.')) return 'application/wasm';
+  if (filePath.includes('.js.')) return 'application/javascript';
+  if (filePath.includes('.data.')) return 'application/octet-stream';
+  if (filePath.includes('.json.')) return 'application/json';
+  return 'application/octet-stream';
+}
+
+function setUnityEncodingHeaders(res, filePath) {
+  if (filePath.endsWith('.br')) {
+    res.setHeader('Content-Encoding', 'br');
+  } else if (filePath.endsWith('.gz')) {
+    res.setHeader('Content-Encoding', 'gzip');
+  } else {
+    return;
+  }
+
+  res.setHeader('Content-Type', getUnityContentType(filePath));
+  res.setHeader('Vary', 'Accept-Encoding');
+}
+
+app.use((req, res, next) => {
+  const urlPath = req.path ?? '';
+  const isHttps = req.secure || req.headers['x-forwarded-proto'] === 'https';
+
+  if (!isHttps && urlPath.endsWith('.br')) {
+    const safePath = path.normalize(urlPath).replace(/^\/+/, '');
+    const filePath = path.join(publicDir, safePath);
+    if (!filePath.startsWith(publicDir)) return next();
+
+    fs.stat(filePath, (err, stat) => {
+      if (err || !stat.isFile()) return next();
+      res.setHeader('Content-Type', getUnityContentType(filePath));
+      const stream = fs.createReadStream(filePath);
+      stream.on('error', () => next());
+      stream.pipe(zlib.createBrotliDecompress()).pipe(res);
+    });
+    return;
+  }
+
+  if (urlPath.endsWith('.br') || urlPath.endsWith('.gz')) {
+    setUnityEncodingHeaders(res, urlPath);
+  }
+  next();
+});
 
 app.use(
   express.static(path.join(__dirname, '..', 'public'), {
     setHeaders: (res, filePath) => {
-      if (filePath.endsWith('.br')) {
-        res.setHeader('Content-Encoding', 'br');
-        if (filePath.endsWith('.wasm.br')) res.setHeader('Content-Type', 'application/wasm');
-        else if (filePath.endsWith('.js.br')) res.setHeader('Content-Type', 'application/javascript');
-        else if (filePath.endsWith('.data.br')) res.setHeader('Content-Type', 'application/octet-stream');
-      }
+      setUnityEncodingHeaders(res, filePath);
     }
   })
 );

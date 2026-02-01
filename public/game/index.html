@@ -51,14 +51,15 @@
         updateBannerVisibility();
       }
 
-      var buildUrl = "Build";
-      var loaderUrl = buildUrl + "/TestBuild.loader.js";
+      var baseUrl = new URL('.', window.location.href);
+      var buildUrl = new URL('Build/', baseUrl).toString();
+      var loaderUrl = buildUrl + "TestBuild.loader.js";
       var config = {
         arguments: [],
-        dataUrl: buildUrl + "/TestBuild.data.br",
-        frameworkUrl: buildUrl + "/TestBuild.framework.js.br",
-        codeUrl: buildUrl + "/TestBuild.wasm.br",
-        streamingAssetsUrl: "StreamingAssets",
+        dataUrl: buildUrl + "TestBuild.data.br",
+        frameworkUrl: buildUrl + "TestBuild.framework.js.br",
+        codeUrl: buildUrl + "TestBuild.wasm.br",
+        streamingAssetsUrl: new URL('StreamingAssets/', baseUrl).toString(),
         companyName: "DefaultCompany",
         productName: "PGJ_2026",
         productVersion: "0.1.0",
