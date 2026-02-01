@@ -240,8 +240,8 @@ export function createGame({ sendToSocket, dayLengthMs = DEFAULT_DAY_LENGTH_MS, 
     room.starting = true;
     room.startId = crypto.randomUUID();
     room.pendingStartAcks = new Set(room.players.keys());
-    room.grass = buildGrassMap(grass);
-    room.pens = buildPenMap(pens);
+    room.grass = grass;
+    room.pens = pens;
     broadcastRoomStart(roomId, room.startId, Date.now() + USER_START_TIMEOUT_MS);
 
     room.startTimeout = setTimeout(() => {
@@ -318,8 +318,10 @@ export function createGame({ sendToSocket, dayLengthMs = DEFAULT_DAY_LENGTH_MS, 
     const room = rooms.get(roomId);
     if (!room) return;
 
-    const grassIds = [...room.grass.keys()];
-    const penIds = [...room.pens.keys()];
+    const grassIds = room.grass;
+    const penIds = room.pens;
+
+    console.log(grassIds, penIds);
 
     for (const socket of room.sockets.values()) {
       sendToSocket(socket, 'RoomStart', { roomId, startId, timeoutMs, grass: grassIds, pens: penIds });
@@ -332,6 +334,7 @@ export function createGame({ sendToSocket, dayLengthMs = DEFAULT_DAY_LENGTH_MS, 
 
     for (const [playerId, socket] of room.sockets.entries()) {
       const player = room.players.get(playerId);
+      console.log(playerId, player);
       if (!player) continue;
       sendToSocket(socket, 'PlayerRole', { roomId, role: player.role });
     }

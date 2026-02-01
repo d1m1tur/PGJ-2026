@@ -17,7 +17,18 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
-app.use(express.static(path.join(__dirname, '..', 'public')));
+app.use(
+  express.static(path.join(__dirname, '..', 'public'), {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.br')) {
+        res.setHeader('Content-Encoding', 'br');
+        if (filePath.endsWith('.wasm.br')) res.setHeader('Content-Type', 'application/wasm');
+        else if (filePath.endsWith('.js.br')) res.setHeader('Content-Type', 'application/javascript');
+        else if (filePath.endsWith('.data.br')) res.setHeader('Content-Type', 'application/octet-stream');
+      }
+    }
+  })
+);
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true });
@@ -60,7 +71,7 @@ wss.on('connection', (socket) => {
     const { type, payload } = message;
 
     // eslint-disable-next-line no-console
-    // console.log('[ws] incoming', { type, payload });
+    console.log('[ws] incoming', { type, payload });
 
     if (type === 'RoomJoin') {
       const { roomId, name, requestId } = payload ?? {};
