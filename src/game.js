@@ -6,11 +6,11 @@ import { DeathReason, Player } from './entities/Player.js';
 import { stat } from 'node:fs';
 
 const TICK_RATE_HZ = 20;
-const DEFAULT_DAY_LENGTH_MS = 100;
+const DEFAULT_DAY_LENGTH_MS = 60000;
 const DEFAULT_TOTAL_DAYS = 5;
 const GRASS_PER_SHEEP_PER_DAY = 3;
 const USER_START_TIMEOUT_MS = 10000;
-const GOD_MODE = true;
+const GOD_MODE = false;
 
 const GAME_END_REASONS = Object.freeze({
   WOLVES_ELIMINATED: 0,
