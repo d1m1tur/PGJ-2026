@@ -17,9 +17,9 @@ export class Entity {
       id: this.id,
       type: this.type,
       color: this.color,
-      x: Math.round(this.x),
-      y: Math.round(this.y),
-      z: Math.round(this.z)
+      x: this.x,
+      y: this.y,
+      z: this.z
     };
   }
 }

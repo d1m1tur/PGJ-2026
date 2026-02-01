@@ -20,7 +20,8 @@ const GAME_END_REASONS = Object.freeze({
 
 function randomColor() {
   const bytes = crypto.randomBytes(3);
-  return `#${bytes.toString('hex')}`;
+  const light = Array.from(bytes, (b) => Math.floor(160 + (b / 255) * 95));
+  return `#${light.map((b) => b.toString(16).padStart(2, '0')).join('')}`;
 }
 
 function shuffle(array) {
@@ -94,7 +95,7 @@ export function createGame({ sendToSocket, dayLengthMs = DEFAULT_DAY_LENGTH_MS, 
       day: room.currentDay,
       totalDays: room.totalDays,
       dayEndsAt: room.dayEndsAt,
-      players: [...room.players.values()].map((p) => p.serialize())
+      players: [...room.players.values()],
     };
   }
 
