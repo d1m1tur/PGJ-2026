@@ -118,7 +118,8 @@ export function createGame({ sendToSocket, dayLengthMs = DEFAULT_DAY_LENGTH_MS, 
       role: 'sheep',
       color: randomColor(),
       x: 0,
-      y: 0
+      y: 0,
+      z: 0
     });
 
     room.players.set(socket.id, player);
@@ -179,9 +180,11 @@ export function createGame({ sendToSocket, dayLengthMs = DEFAULT_DAY_LENGTH_MS, 
 
     const x = Number.isFinite(position?.x) ? position.x : player.x;
     const y = Number.isFinite(position?.y) ? position.y : player.y;
+    const z = Number.isFinite(position?.z) ? position.z : player.z;
 
     player.x = x;
     player.y = y;
+    player.z = z;
   }
 
   function handlePenUpdate({ socket, inPen, penId }) {
@@ -261,8 +264,10 @@ export function createGame({ sendToSocket, dayLengthMs = DEFAULT_DAY_LENGTH_MS, 
 
     const x = Number.isFinite(position?.x) ? position.x : player.x;
     const y = Number.isFinite(position?.y) ? position.y : player.y;
+    const z = Number.isFinite(position?.z) ? position.z : player.z;
     player.x = x;
     player.y = y;
+    player.z = z;
 
     room.pendingStartAcks?.delete(socket.id);
     if (room.pendingStartAcks?.size === 0) {

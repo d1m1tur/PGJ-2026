@@ -176,7 +176,7 @@ function ensureSocket() {
       const padding = 30;
       const randX = padding + Math.random() * (canvas.width - padding * 2);
       const randY = padding + Math.random() * (canvas.height - padding * 2);
-      localPosition = { x: randX, y: randY };
+      localPosition = { x: randX, y: randY, z: 0 };
       sendMessage('RoomStartAck', {
         startId: payload?.startId,
         position: localPosition
@@ -391,7 +391,7 @@ function syncLocalPositionFromState() {
   if (!currentState?.players || !localPlayerId) return;
   const me = currentState.players.find((p) => p.id === localPlayerId);
   if (!me) return;
-  localPosition = { x: me.x, y: me.y };
+  localPosition = { x: me.x, y: me.y, z: Number.isFinite(me.z) ? me.z : 0 };
 }
 
 function distance(a, b) {
@@ -505,7 +505,7 @@ setInterval(() => {
   localPosition.x = localPosition.x + vx * localSpeed * dtSec;
   localPosition.y = localPosition.y + vy * localSpeed * dtSec;
 
-  sendMessage('PlayerPosition', { x: localPosition.x, y: localPosition.y });
+  sendMessage('PlayerPosition', { x: localPosition.x, y: localPosition.y, z: localPosition.z });
 
   if (currentState?.started) {
     const penId = findPenId(localPosition);

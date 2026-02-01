@@ -1,10 +1,11 @@
 export class Entity {
-  constructor({ id, x = 0, y = 0, color = '#ffffff', type = 'entity' }) {
+  constructor({ id, x = 0, y = 0, z = 0, color = '#ffffff', type = 'entity' }) {
     if (!id) throw new Error('Entity requires id');
 
     this.id = id;
     this.x = x;
     this.y = y;
+    this.z = z;
     this.color = color;
 
     // High-level classification (e.g. 'player')
@@ -17,7 +18,8 @@ export class Entity {
       type: this.type,
       color: this.color,
       x: Math.round(this.x),
-      y: Math.round(this.y)
+      y: Math.round(this.y),
+      z: Math.round(this.z)
     };
   }
 }

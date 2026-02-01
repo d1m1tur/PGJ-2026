@@ -8,8 +8,8 @@ export const DeathReason = Object.freeze({
 });
 
 export class Player extends Entity {
-  constructor({ id, name, x, y, color, role = 'sheep' }) {
-    super({ id, x, y, color, type: 'player' });
+  constructor({ id, name, x, y, z, color, role = 'sheep' }) {
+    super({ id, x, y, z, color, type: 'player' });
     this.name = name;
 
     // Hidden role (server-side).

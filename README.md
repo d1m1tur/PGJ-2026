@@ -16,6 +16,8 @@ npm run dev
 Then open:
 
 - http://localhost:3000
+- https://pgj-2026.onrender.com/
+- https://low-maxine-pgj-2026-96a8bdcf.koyeb.app/
 
 ## Protocol (overview)
 
