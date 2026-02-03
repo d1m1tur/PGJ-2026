@@ -8,7 +8,7 @@ import zlib from 'node:zlib';
 import express from 'express';
 import { WebSocket, WebSocketServer } from 'ws';
 
-import { createGame } from './game.js';
+import { createGame } from './game/Game.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -117,55 +117,7 @@ wss.on('connection', (socket) => {
     // eslint-disable-next-line no-console
     // console.log('[ws] incoming', { type, payload });
 
-    if (type === 'RoomJoin') {
-      const { roomId, name, requestId } = payload ?? {};
-      try {
-        const result = game.joinRoom({ socket, roomId, name });
-        sendToSocket(socket, 'RoomJoinAck', { requestId, ok: true, ...result });
-      } catch (err) {
-        sendToSocket(socket, 'RoomJoinAck', { requestId, ok: false, error: err?.message ?? String(err) });
-      }
-      return;
-    }
-
-    if (type === 'PlayerPosition') {
-      game.handlePosition({ socket, position: payload });
-      return;
-    }
-
-    if (type === 'PenUpdate') {
-      game.handlePenUpdate({
-        socket,
-        inPen: payload?.inPen,
-        penId: payload?.penId
-      });
-      return;
-    }
-
-    if (type === 'RoomStart') {
-      try {
-        game.startRoom({ socket, grass: payload?.grass, pens: payload?.pens });
-      } catch {
-        // Ignore invalid start requests
-      }
-      return;
-    }
-
-    if (type === 'RoomStartAck') {
-      game.handleStartAck({
-        socket,
-        startId: payload?.startId,
-        position: payload?.position
-      });
-      return;
-    }
-
-    if (type === 'GrassEat') {
-      game.handleGrassEat({
-        socket,
-        grassId: payload?.grassId
-      });
-    }
+    game.handleMessage({ socket, type, payload });
   });
 
   socket.on('close', () => {
