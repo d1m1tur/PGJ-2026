@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BeeBeeBite Lobby</title>
+  </head>
+  <body>
+    <div id="loader" class="loader-overlay">Game starting…</div>
+    <main class="lobby" id="lobbyRoot">
+      <section class="lobby-card">
+        <header class="lobby-header">
+          <h1>BeeBeeBite Lobby</h1>
+          <div class="meta">
+            <div>Status: <span id="status">disconnected</span></div>
+            <div class="mono" id="socketId"></div>
+          </div>
+        </header>
+
+        <div class="controls">
+          <label class="field">
+            Display name
+            <input id="name" type="text" placeholder="Player name" autocomplete="nickname" />
+          </label>
+          <label class="field">
+            Room
+            <input id="room" type="text" placeholder="Room ID" autocomplete="off" />
+          </label>
+        </div>
+
+        <div class="actions">
+          <button id="create">Create lobby</button>
+          <button id="join">Join lobby</button>
+          <button id="leave" class="secondary">Leave</button>
+          <button id="start" class="secondary">Start game</button>
+        </div>
+
+        <section class="room-info">
+          <h2>Room</h2>
+          <div id="roomState">(none)</div>
+          <div id="hostInfo" class="notice"></div>
+          <ul id="players"></ul>
+          <div class="notice">Players in the lobby will appear here once connected.</div>
+        </section>
+
+        <section class="room-info">
+          <h2>Lobbies</h2>
+          <div class="actions">
+            <button id="refresh" class="secondary">Refresh list</button>
+          </div>
+          <ul id="lobbyList"></ul>
+        </section>
+      </section>
+    </main>
+    <div id="gameRoot" class="is-hidden">
+      <div id="app"></div>
+    </div>
+    <script type="module" src="/src/app.js"></script>
+  </body>
+</html>

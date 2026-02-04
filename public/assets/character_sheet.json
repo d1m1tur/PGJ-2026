@@ -1,0 +1,14 @@
+{
+  "frames": {
+    "walk_0": { "frame": { "x": 0, "y": 0, "w": 256, "h": 256 } },
+    "walk_1": { "frame": { "x": 0, "y": 256, "w": 256, "h": 256 } }
+  },
+  "meta": {
+    "image": "sheep_spritesheet.png",
+    "size": { "w": 256, "h": 512 },
+    "scale": "1"
+  },
+  "animations": {
+    "walk": ["walk_0", "walk_1"]
+  }
+}

@@ -1,0 +1,181 @@
+:root {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #f1f1f1;
+  background-color: #101010;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(circle at top, #2a2a2a, #0d0d0d 70%);
+  color: #f1f1f1;
+}
+
+.is-hidden {
+  display: none !important;
+}
+
+.loader-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(8, 8, 10, 0.9);
+  color: #f1f1f1;
+  font-size: 20px;
+  letter-spacing: 0.5px;
+  z-index: 999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.loader-overlay.is-visible {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.lobby {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px 16px;
+}
+
+.lobby-card {
+  width: min(900px, 100%);
+  background: rgba(22, 22, 22, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+  display: grid;
+  gap: 18px;
+}
+
+.lobby-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.lobby-header h1 {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: 0.4px;
+}
+
+.meta {
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+  color: #c9c9c9;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+  color: #d7d7d7;
+}
+
+.field input {
+  background: #151515;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: #f4f4f4;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+button,
+.link-button {
+  border: 0;
+  border-radius: 12px;
+  padding: 10px 16px;
+  background: #3b6bff;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button.secondary,
+.link-button.secondary {
+  background: #2a2a2a;
+  color: #f1f1f1;
+}
+
+.room-info {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 16px;
+}
+
+.room-info h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+#players {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+}
+
+#lobbyList {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+}
+
+.lobby-item {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.lobby-item button {
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: #2a2a2a;
+}
+
+.notice {
+  font-size: 13px;
+  color: #c2c2c2;
+}

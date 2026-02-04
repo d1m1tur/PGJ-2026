@@ -14,6 +14,7 @@ export class Room {
       stats: {
         grassEatenByPlayer: new Map(),
       },
+      mapSeed: null,
     };
     this.sockets = new Map();
     this.lastUpdateMs = Date.now();
@@ -23,10 +24,11 @@ export class Room {
     this.pendingStartAcks = null;
     this.startTimeout = null;
     this.ended = false;
+    this.hostId = null;
   }
 
   serialize() {
-    const { players, grass, pens, day } = this.state;
+    const { players, grass, pens, day, mapSeed } = this.state;
     return {
       roomId: this.roomId,
       started: Boolean(this.started),
@@ -34,6 +36,7 @@ export class Room {
       day: day.current,
       totalDays: day.totalDays,
       dayEndsAt: day.endsAt,
+      mapSeed,
       players: [...players.values()],
     };
   }

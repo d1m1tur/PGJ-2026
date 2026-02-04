@@ -17,6 +17,7 @@ export function broadcastLobby(game, roomId) {
     roomId,
     players: [...room.state.players.values()].map((player) => player.name),
     started: Boolean(room.started),
+    hostId: room.hostId ?? null,
   };
 
   for (const socket of room.sockets.values()) {
@@ -32,7 +33,14 @@ export function broadcastRoomStart(game, roomId, startId, timeoutMs) {
   const penIds = [...room.state.pens.keys()];
 
   for (const socket of room.sockets.values()) {
-    game.sendToSocket(socket, 'RoomStart', { roomId, startId, timeoutMs, grass: grassIds, pens: penIds });
+    game.sendToSocket(socket, 'RoomStart', {
+      roomId,
+      startId,
+      timeoutMs,
+      grass: grassIds,
+      pens: penIds,
+      seed: room.state.mapSeed,
+    });
   }
 }
 

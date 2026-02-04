@@ -3,10 +3,26 @@ import crypto from 'node:crypto';
 import { Grass } from '../entities/Grass.js';
 import { Pen } from '../entities/Pen.js';
 
+let colorIndex = Math.floor(Math.random() * 360);
+const GOLDEN_ANGLE = 137.508;
+
+function hslToHex(h, s, l) {
+  const a = s * Math.min(l, 1 - l);
+  const f = (n) => {
+    const k = (n + h / 30) % 12;
+    const color = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    return Math.round(255 * color).toString(16).padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
 export function randomColor() {
-  const bytes = crypto.randomBytes(3);
-  const light = Array.from(bytes, (b) => Math.floor(160 + (b / 255) * 95));
-  return `#${light.map((b) => b.toString(16).padStart(2, '0')).join('')}`;
+  colorIndex = (colorIndex + GOLDEN_ANGLE) % 360;
+  const jitter = crypto.randomInt(0, 8);
+  const hue = (colorIndex + jitter) % 360;
+  const sat = 0.7 + crypto.randomInt(0, 20) / 100;
+  const light = 0.55 + crypto.randomInt(0, 15) / 100;
+  return hslToHex(hue, sat, light);
 }
 
 export function shuffle(array) {
@@ -63,4 +79,56 @@ export function buildPenMap(pens) {
   }
 
   return map;
+}
+
+export function buildSpawnPoints() {
+  const points = [];
+  const cols = 8;
+  const rows = 5;
+  const WORLD_WIDTH = 800;
+  const WORLD_HEIGHT = 450;
+  const paddingX = WORLD_WIDTH * 0.08;
+  const paddingY = WORLD_HEIGHT * 0.12;
+  const usableW = WORLD_WIDTH - paddingX * 2;
+  const usableH = WORLD_HEIGHT - paddingY * 2;
+  for (let y = 0; y < rows; y += 1) {
+    for (let x = 0; x < cols; x += 1) {
+      const px = paddingX + (usableW * x) / Math.max(1, cols - 1);
+      const py = paddingY + (usableH * y) / Math.max(1, rows - 1);
+      points.push({ id: `spawn_${y}_${x}`, x: px, y: py });
+    }
+  }
+  return points;
+}
+
+export function seededShuffle(items, seed, salt = 0) {
+  let t = (seed + salt) >>> 0;
+  const rng = () => {
+    t += 0x6d2b79f5;
+    let r = Math.imul(t ^ (t >>> 15), 1 | t);
+    r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+
+  const shuffled = [...items];
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rng() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+export function generateSpawnIds(seed, count, salt) {
+  const MAP_WIDTH = 100;
+  const MAP_HEIGHT = 75;
+  const tiles = [];
+  for (let y = 1; y < MAP_HEIGHT - 1; y += 1) {
+    for (let x = 1; x < MAP_WIDTH - 1; x += 1) {
+      tiles.push({ x, y });
+    }
+  }
+  const shuffled = seededShuffle(tiles, seed, salt);
+  return shuffled
+    .slice(0, Math.min(count, shuffled.length))
+    .map((tile) => `tile_${tile.x}_${tile.y}`);
 }

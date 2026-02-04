@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="384" height="32" viewBox="0 0 384 32">
+  <rect width="384" height="32" fill="transparent" />
+
+  <!-- Grass -->
+  <g transform="translate(0,0)">
+    <polygon points="32,0 64,16 32,32 0,16" fill="#6BCB77" stroke="#3C8A4B" stroke-width="2" />
+    <polygon points="32,6 58,16 32,26 6,16" fill="#7DD38A" opacity="0.75" />
+  </g>
+
+  <!-- Stone wall -->
+  <g transform="translate(64,0)">
+    <polygon points="32,0 64,16 32,32 0,16" fill="#A9A9A9" stroke="#7A7A7A" stroke-width="2" />
+    <rect x="10" y="12" width="12" height="6" fill="#8E8E8E" />
+    <rect x="28" y="10" width="12" height="7" fill="#8B8B8B" />
+    <rect x="42" y="16" width="10" height="6" fill="#8F8F8F" />
+  </g>
+
+  <!-- High grass -->
+  <g transform="translate(128,0)">
+    <polygon points="32,0 64,16 32,32 0,16" fill="#5FBF6D" stroke="#2F7A3C" stroke-width="2" />
+    <path d="M8 16 L14 10 L12 18 Z" fill="#3FAF57" />
+    <path d="M20 18 L26 10 L24 20 Z" fill="#3FAF57" />
+    <path d="M32 18 L38 8 L36 20 Z" fill="#3FAF57" />
+    <path d="M44 18 L50 10 L48 20 Z" fill="#3FAF57" />
+    <path d="M54 18 L58 12 L56 20 Z" fill="#3FAF57" />
+  </g>
+
+  <!-- Water -->
+  <g transform="translate(192,0)">
+    <polygon points="32,0 64,16 32,32 0,16" fill="#4D9DE0" stroke="#2B6FA8" stroke-width="2" />
+    <path d="M10 16 Q16 12 22 16 T34 16 T46 16 T58 16" stroke="#A6D8FF" stroke-width="2" fill="none" opacity="0.8" />
+    <path d="M8 20 Q14 18 20 20 T32 20 T44 20 T56 20" stroke="#7FC3FF" stroke-width="1.5" fill="none" opacity="0.7" />
+  </g>
+
+  <!-- Wood wall -->
+  <g transform="translate(256,0)">
+    <polygon points="32,0 64,16 32,32 0,16" fill="#C9985A" stroke="#8A5A2B" stroke-width="2" />
+    <rect x="10" y="12" width="8" height="10" fill="#B88346" />
+    <rect x="20" y="10" width="8" height="12" fill="#B27C3D" />
+    <rect x="30" y="12" width="8" height="10" fill="#B88346" />
+    <rect x="40" y="10" width="8" height="12" fill="#B27C3D" />
+  </g>
+
+  <!-- Bridge -->
+  <g transform="translate(320,0)">
+    <polygon points="32,0 64,16 32,32 0,16" fill="#B8844A" stroke="#7B4E23" stroke-width="2" />
+    <rect x="6" y="12" width="52" height="3" fill="#9C6B3A" />
+    <rect x="6" y="17" width="52" height="3" fill="#9C6B3A" />
+    <rect x="6" y="22" width="52" height="3" fill="#9C6B3A" />
+    <rect x="10" y="9" width="4" height="16" fill="#7B4E23" />
+    <rect x="50" y="9" width="4" height="16" fill="#7B4E23" />
+  </g>
+</svg>

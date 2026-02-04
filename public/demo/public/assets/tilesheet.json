@@ -1,0 +1,27 @@
+{
+  "frames": {
+    "tile_grass": {
+      "frame": { "x": 0, "y": 0, "w": 64, "h": 32 }
+    },
+    "tile_wall_stone": {
+      "frame": { "x": 64, "y": 0, "w": 64, "h": 32 }
+    },
+    "tile_high_grass": {
+      "frame": { "x": 128, "y": 0, "w": 64, "h": 32 }
+    },
+    "tile_water": {
+      "frame": { "x": 192, "y": 0, "w": 64, "h": 32 }
+    },
+    "tile_wall_wood": {
+      "frame": { "x": 256, "y": 0, "w": 64, "h": 32 }
+    },
+    "tile_bridge": {
+      "frame": { "x": 320, "y": 0, "w": 64, "h": 32 }
+    }
+  },
+  "meta": {
+    "image": "tilesheet.svg",
+    "size": { "w": 384, "h": 32 },
+    "scale": "1"
+  }
+}

@@ -66,6 +66,17 @@ export class Game {
     return room;
   }
 
+  getLobbyList() {
+    return [...this.rooms.values()]
+      .filter((room) => !room.ended)
+      .map((room) => ({
+        roomId: room.roomId,
+        players: room.state.players.size,
+        started: Boolean(room.started),
+        hostId: room.hostId ?? null,
+      }));
+  }
+
   serializeRoom(roomId) {
     const room = this.rooms.get(roomId);
     if (!room) return { roomId, players: [] };
@@ -80,6 +91,9 @@ export class Game {
     if (room) {
       room.state.players.delete(socket.id);
       room.sockets.delete(socket.id);
+      if (room.hostId === socket.id) {
+        room.hostId = room.state.players.keys().next().value ?? null;
+      }
       if (room.starting && room.pendingStartAcks) {
         room.pendingStartAcks.delete(socket.id);
         if (room.pendingStartAcks.size === 0) {
@@ -104,6 +118,9 @@ export class Game {
     room.state.players.delete(playerId);
     room.sockets.delete(playerId);
     room.pendingStartAcks?.delete(playerId);
+    if (room.hostId === playerId) {
+      room.hostId = room.state.players.keys().next().value ?? null;
+    }
     this.playerRoom.delete(playerId);
   }
 

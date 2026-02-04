@@ -19,6 +19,7 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 const publicDir = path.join(__dirname, '..', 'public');
+const demoDistDir = path.join(publicDir, 'demo', 'dist');
 
 function getUnityContentType(filePath) {
   if (filePath.includes('.wasm.')) return 'application/wasm';
@@ -64,6 +65,23 @@ app.use((req, res, next) => {
     setUnityEncodingHeaders(res, urlPath);
   }
   next();
+});
+
+app.use(
+  '/demo',
+  express.static(demoDistDir, {
+    setHeaders: (res, filePath) => {
+      setUnityEncodingHeaders(res, filePath);
+    }
+  })
+);
+
+app.get('/demo', (_req, res) => {
+  res.sendFile(path.join(demoDistDir, 'index.html'));
+});
+
+app.get('/demo/*', (_req, res) => {
+  res.sendFile(path.join(demoDistDir, 'index.html'));
 });
 
 app.use(
